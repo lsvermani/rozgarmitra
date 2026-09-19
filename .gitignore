@@ -1,0 +1,17 @@
+# Dependencies
+**/node_modules/
+**/.dart_tool/
+**/.packages
+
+# Local environment and secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# Generated builds and tooling
+**/dist/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.idea/
+**/.vscode/

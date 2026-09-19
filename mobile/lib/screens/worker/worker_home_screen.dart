@@ -1,0 +1,74 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/job_provider.dart';
+import '../../widgets/job_card.dart';
+import '../../utils/app_theme.dart';
+
+class WorkerHomeScreen extends StatefulWidget {
+  const WorkerHomeScreen({super.key});
+
+  @override
+  State<WorkerHomeScreen> createState() => _WorkerHomeScreenState();
+}
+
+class _WorkerHomeScreenState extends State<WorkerHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<JobProvider>().fetchJobs();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final jobProvider = context.watch<JobProvider>();
+    final name = auth.currentUser?.name.isNotEmpty == true ? auth.currentUser!.name : 'Worker';
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Rozgarmitra')),
+      body: RefreshIndicator(
+        onRefresh: () => jobProvider.fetchJobs(),
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Text('Hello, $name 👋', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 16),
+            InkWell(
+              onTap: () => context.push('/worker/jobs'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.search, color: AppColors.textMuted),
+                    SizedBox(width: 10),
+                    Text('Search jobs', style: TextStyle(color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text('📍 Jobs Near You', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            if (jobProvider.isLoading) const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
+            if (jobProvider.error != null)
+              Padding(padding: const EdgeInsets.all(16), child: Text(jobProvider.error!, style: const TextStyle(color: AppColors.danger))),
+            if (!jobProvider.isLoading && jobProvider.jobs.isEmpty)
+              const Padding(padding: EdgeInsets.all(16), child: Text('No jobs available right now. Pull to refresh.')),
+            ...jobProvider.jobs
+                .take(10)
+                .map((job) => JobCard(job: job, onTap: () => context.push('/worker/jobs/${job.id}'))),
+          ],
+        ),
+      ),
+    );
+  }
+}
