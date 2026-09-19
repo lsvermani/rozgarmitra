@@ -29,6 +29,7 @@ export const authApi = {
 
 export const jobsApi = {
   list: (params) => api.get('/jobs', { params }),
+  create: (data) => api.post('/jobs', data),
   apply: (id) => api.post(`/jobs/${id}/apply`),
 };
 

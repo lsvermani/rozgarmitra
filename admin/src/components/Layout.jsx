@@ -6,11 +6,13 @@ const links = [
   { to: '/users', label: '👥 Users' },
   { to: '/jobs', label: '📋 Jobs' },
   { to: '/reports', label: '🚩 Reports' },
+  { to: '/preview', label: '🎭 Product Preview' },
 ];
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const visibleLinks = user?.role === 'job_creator' ? links.filter((link) => link.to === '/') : links;
 
   const handleLogout = () => {
     logout();
@@ -25,7 +27,7 @@ export default function Layout() {
           <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.7, marginTop: 4 }}>Admin Panel</div>
         </div>
         <nav>
-          {links.map((l) => (
+          {visibleLinks.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}

@@ -64,6 +64,7 @@ async function listJobs(req, res, next) {
     } = req.query;
 
     const query = {};
+    if (req.user?.role === 'job_creator') query.creatorId = req.user._id;
     if (category) query.category = category;
     if (skill) query.requiredSkills = skill;
     if (status) query.status = status;
