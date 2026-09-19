@@ -88,4 +88,35 @@ async function updateApplicationStatus(req, res, next) {
   }
 }
 
-module.exports = { listApplications, updateApplicationStatus };
+// PUT /api/applications/:id/accept (worker only)
+async function acceptApplication(req, res, next) {
+  try {
+    const application = await Application.findById(req.params.id).populate('jobId');
+    if (!application) return res.status(404).json({ success: false, message: 'Application not found.' });
+    if (application.workerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: 'This application does not belong to you.' });
+    }
+    if (application.status !== 'SELECTED') {
+      return res.status(400).json({ success: false, message: 'Only a selected task can be accepted.' });
+    }
+
+    application.status = 'ACCEPTED';
+    await application.save();
+    application.jobId.status = 'IN_PROGRESS';
+    await application.jobId.save();
+
+    await notify(
+      application.jobId.creatorId,
+      'Worker accepted the task',
+      `The selected worker accepted "${application.jobId.title}" and is ready to start.`,
+      'TASK_ACCEPTED',
+      application.jobId._id
+    );
+
+    res.json({ success: true, message: 'Task accepted.', application });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listApplications, updateApplicationStatus, acceptApplication };

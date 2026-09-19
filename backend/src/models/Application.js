@@ -6,7 +6,7 @@ const applicationSchema = new mongoose.Schema(
     workerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     status: {
       type: String,
-      enum: ['APPLIED', 'SHORTLISTED', 'SELECTED', 'REJECTED', 'COMPLETED'],
+      enum: ['APPLIED', 'SHORTLISTED', 'SELECTED', 'ACCEPTED', 'REJECTED', 'COMPLETED'],
       default: 'APPLIED',
     },
     appliedAt: { type: Date, default: Date.now },

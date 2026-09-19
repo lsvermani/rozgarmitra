@@ -8,6 +8,8 @@ import Jobs from './pages/Jobs';
 import Reports from './pages/Reports';
 import WorkerLogin from './pages/WorkerLogin';
 import WorkerDashboard from './pages/WorkerDashboard';
+import ProductPreview from './pages/ProductPreview';
+import EntryWork from './pages/EntryWork';
 import './styles.css';
 
 function ProtectedRoute({ children }) {
@@ -27,6 +29,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/entrywork" element={<EntryWork />} />
       <Route path="/worker/login" element={<WorkerLogin />} />
       <Route
         path="/worker"
@@ -48,6 +51,7 @@ function AppRoutes() {
         <Route path="users" element={<Users />} />
         <Route path="jobs" element={<Jobs />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="preview" element={<ProductPreview />} />
       </Route>
     </Routes>
   );

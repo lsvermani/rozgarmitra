@@ -37,6 +37,16 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen> {
     }
   }
 
+  Future<void> _acceptTask(JobApplication application) async {
+    try {
+      await context.read<ApiService>().put('/applications/${application.id}/accept', {});
+      await _load();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Task accepted.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   Color _statusColor(String status) {
     switch (status) {
       case 'SELECTED':
@@ -74,17 +84,19 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen> {
                               onTap: () => context.push('/worker/jobs/${a.jobId}'),
                               title: Text(a.jobTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
                               subtitle: a.jobPayment != null ? Text('₹${a.jobPayment}/day') : null,
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: _statusColor(a.status).withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  a.status,
-                                  style: TextStyle(color: _statusColor(a.status), fontWeight: FontWeight.w700, fontSize: 11),
-                                ),
-                              ),
+                              trailing: a.status == 'SELECTED'
+                                  ? ElevatedButton(onPressed: () => _acceptTask(a), child: const Text('Accept task'))
+                                  : Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: _statusColor(a.status).withOpacity(0.12),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        a.status,
+                                        style: TextStyle(color: _statusColor(a.status), fontWeight: FontWeight.w700, fontSize: 11),
+                                      ),
+                                    ),
                             ),
                           );
                         },

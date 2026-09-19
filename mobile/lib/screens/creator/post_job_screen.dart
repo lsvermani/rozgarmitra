@@ -65,7 +65,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         'paymentUnit': 'day',
         'location': {'city': _cityCtrl.text.trim(), 'address': _cityCtrl.text.trim(), 'state': '', 'pincode': ''},
       });
-      if (mounted) context.pop();
+      if (mounted) context.pop(true);
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {

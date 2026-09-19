@@ -31,7 +31,7 @@ class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
       final auth = context.read<AuthProvider>();
       final all = res['jobs'] as List;
       setState(() {
-        _myJobs = all.where((j) => (j['creatorId']?['_id'] ?? j['creatorId']) == auth.currentUser?.id).toList();
+      _myJobs = all.where((j) => (j['creatorId']?['_id'] ?? j['creatorId']).toString() == auth.currentUser?.id.toString()).toList();
       });
     } finally {
       setState(() => _loading = false);
@@ -66,7 +66,10 @@ class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: () => context.push('/creator/post-job'),
+              onPressed: () async {
+                final posted = await context.push<bool>('/creator/post-job');
+                if (posted == true && mounted) _load();
+              },
               icon: const Icon(Icons.add),
               label: const Text('POST A JOB'),
             ),
