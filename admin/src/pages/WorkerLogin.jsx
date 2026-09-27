@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
+import BrandMark from '../components/BrandMark';
 
 export default function WorkerLogin() {
   const [step, setStep] = useState('mobile');
@@ -40,7 +41,7 @@ export default function WorkerLogin() {
     setError('');
     setLoading(true);
     try {
-      const response = await authApi.verifyOtp(mobile, otp);
+      const response = await authApi.verifyOtp(mobile, otp, 'worker');
       if (response.data.user.role !== 'worker') {
         setError('This account is not a worker account.');
         return;
@@ -58,7 +59,7 @@ export default function WorkerLogin() {
     <div className="rm-login-page rm-login-page--worker">
       <div className="rm-login-box">
         <div className="rm-login-mark">WORKER HUB</div>
-        <h1>Rozgarmitra</h1>
+        <h1 className="rm-login-title"><BrandMark size={40} />Rozgarmitra</h1>
         <p className="tagline">Find nearby work. Apply in one tap.</p>
 
         {step === 'mobile' && (

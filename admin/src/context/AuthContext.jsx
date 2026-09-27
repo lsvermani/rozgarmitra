@@ -1,6 +1,5 @@
-import { createContext, useContext, useState } from 'react';
-
-const AuthContext = createContext(null);
+import { useState } from 'react';
+import { AuthContext } from './useAuth';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -9,9 +8,15 @@ export function AuthProvider({ children }) {
   });
 
   const login = (token, userData) => {
+    const pendingName = localStorage.getItem('rm_pending_name');
+    const resolvedUser = {
+      ...userData,
+      name: userData.name || pendingName || '',
+    };
     localStorage.setItem('rm_admin_token', token);
-    localStorage.setItem('rm_admin_user', JSON.stringify(userData));
-    setUser(userData);
+    localStorage.setItem('rm_admin_user', JSON.stringify(resolvedUser));
+    localStorage.removeItem('rm_pending_name');
+    setUser(resolvedUser);
   };
 
   const logout = () => {
@@ -23,6 +28,3 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}

@@ -17,9 +17,10 @@ function getFirebaseAuth() {
 // body: { mobile, role }  role required only on first registration
 async function sendOtp(req, res, next) {
   try {
-    const { mobile, role } = req.body;
+    const { mobile, role, name } = req.body;
 
-    let user = await User.findOne({ mobile });
+    const lookup = role ? { mobile, role } : { mobile };
+    let user = await User.findOne(lookup);
 
     if (!user) {
       if (!role || !['worker', 'job_creator'].includes(role)) {
@@ -28,9 +29,10 @@ async function sendOtp(req, res, next) {
           message: 'New number detected. Please provide role: "worker" or "job_creator".',
         });
       }
-      user = await User.create({ mobile, role });
+      user = await User.create({ mobile, role, ...(name ? { name: name.trim() } : {}) });
     }
 
+    if (name) user.name = name.trim();
     const otp = otpService.generateOtp();
     user.otpCode = otp;
     user.otpExpiresAt = otpService.getOtpExpiry();
@@ -60,9 +62,9 @@ async function sendOtp(req, res, next) {
 // body: { mobile, otp }
 async function verifyOtp(req, res, next) {
   try {
-    const { mobile, otp } = req.body;
+    const { mobile, otp, role, name } = req.body;
 
-    const user = await User.findOne({ mobile }).select('+otpCode +otpExpiresAt');
+    const user = await User.findOne(role ? { mobile, role } : { mobile }).select('+otpCode +otpExpiresAt');
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found. Please send OTP first.' });
     }
@@ -77,6 +79,7 @@ async function verifyOtp(req, res, next) {
 
     user.otpCode = undefined;
     user.otpExpiresAt = undefined;
+    if (name) user.name = name.trim();
     await user.save();
 
     const token = signToken(user);
@@ -107,7 +110,7 @@ async function firebaseAuth(req, res, next) {
       return res.status(400).json({ success: false, message: 'A valid Indian phone number is required.' });
     }
 
-    let user = await User.findOne({ mobile });
+    let user = await User.findOne(req.body.role ? { mobile, role: req.body.role } : { mobile });
     if (!user) {
       if (!req.body.role) {
         return res.status(400).json({ success: false, message: 'New number detected. Please provide a role.' });

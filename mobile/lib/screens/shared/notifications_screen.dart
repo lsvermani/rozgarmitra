@@ -75,7 +75,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         leading: Icon(_iconFor(n['type'] ?? ''), color: read ? AppColors.textMuted : AppColors.primary),
                         title: Text(n['title'] ?? '', style: TextStyle(fontWeight: read ? FontWeight.w500 : FontWeight.w800)),
                         subtitle: Text(n['message'] ?? ''),
-                        tileColor: read ? null : AppColors.primaryLight.withOpacity(0.3),
+                        tileColor: read ? null : AppColors.primaryLight.withValues(alpha: 0.3),
                       );
                     },
                   ),

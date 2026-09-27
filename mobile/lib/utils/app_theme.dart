@@ -34,6 +34,12 @@ class AppTheme {
         bodyLarge: TextStyle(fontSize: 16, color: AppColors.textPrimary),
         bodyMedium: TextStyle(fontSize: 14, color: AppColors.textMuted),
       ),
+      // NOTE: Size.fromHeight(56) = Size(double.infinity, 56): buttons fill the
+      // width of a bounded parent (Column, Expanded slot, SizedBox). Because the
+      // width is ∞, an ElevatedButton placed directly in a Row (whose non-flex
+      // children get unbounded main-axis width) will assert "BoxConstraints
+      // forces an infinite width" — wrap such buttons in a width-bounded widget
+      // (e.g. SizedBox(width: ...)) first. See job_card.dart.
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,

@@ -66,7 +66,8 @@ export default function Jobs() {
         {loading && !error && <div className="rm-loading">Loading jobs...</div>}
         {!loading && !error && jobs.length === 0 && <div className="rm-empty">No jobs found.</div>}
         {!loading && !error && jobs.length > 0 && (
-          <table className="rm-table">
+          <div className="rm-scroll-list" style={{ maxHeight: 560 }}>
+            <table className="rm-table">
             <thead>
               <tr>
                 <th>Title</th>
@@ -99,7 +100,8 @@ export default function Jobs() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
     </div>

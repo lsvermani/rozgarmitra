@@ -116,6 +116,11 @@ Demo logins (OTP always `123456` in demo mode):
 - **Job Creator**: `8000000010` (ABC Construction)
 - New numbers can also self-register through the role-selection → OTP flow.
 
+How OTP login resolves in the app:
+- If Firebase is configured (`android/app/google-services.json` with the Phone provider enabled), the app uses **Firebase Phone Auth** and exchanges the Firebase ID token via `POST /auth/firebase`.
+- If Firebase is **not** configured (the default state of this repo), the app automatically falls back to the backend's own OTP endpoints — `POST /auth/send-otp` returns `demoOtp` and the login screen auto-fills it, so demo mode works with no Firebase project.
+- Debug builds include a cleartext-HTTP `network_security_config.xml` (`android/app/src/debug/`) so calls to `http://10.0.2.2:5000/api` are allowed on API 28+. Release builds keep Android's default (cleartext HTTP blocked).
+
 > ⚠️ The Flutter source was written carefully and checked for structural/syntax consistency, but it has **not been compiled** in this environment (no Flutter SDK available in the sandbox used to build this project). Run `flutter analyze` and `flutter run` locally as your first step — treat this as a strong first-pass implementation to build on, not a pre-tested release.
 
 ---

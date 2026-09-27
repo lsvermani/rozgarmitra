@@ -1,9 +1,16 @@
 const mongoose = require('mongoose');
+const User = require('../models/User');
 
 async function connectDB() {
   const uri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/rozgarmitra';
   try {
     await mongoose.connect(uri);
+    try {
+      await User.collection.dropIndex('mobile_1');
+    } catch (err) {
+      if (err.codeName !== 'IndexNotFound') throw err;
+    }
+    await User.syncIndexes();
     console.log(`[DB] Connected to MongoDB: ${uri}`);
   } catch (err) {
     console.error('[DB] MongoDB connection error:', err.message);

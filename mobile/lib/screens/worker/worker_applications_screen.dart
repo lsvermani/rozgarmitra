@@ -85,11 +85,18 @@ class _WorkerApplicationsScreenState extends State<WorkerApplicationsScreen> {
                               title: Text(a.jobTitle, style: const TextStyle(fontWeight: FontWeight.w700)),
                               subtitle: a.jobPayment != null ? Text('₹${a.jobPayment}/day') : null,
                               trailing: a.status == 'SELECTED'
-                                  ? ElevatedButton(onPressed: () => _acceptTask(a), child: const Text('Accept task'))
+                                  ? SizedBox(
+                                      // ListTile's trailing can hand out unbounded
+                                      // main-axis width; the theme's minimumSize
+                                      // (width = ∞) would then assert. Pin the width.
+                                      width: 150,
+                                      child: ElevatedButton(
+                                          onPressed: () => _acceptTask(a), child: const Text('Accept task')),
+                                    )
                                   : Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                       decoration: BoxDecoration(
-                                        color: _statusColor(a.status).withOpacity(0.12),
+                                        color: _statusColor(a.status).withValues(alpha: 0.12),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(

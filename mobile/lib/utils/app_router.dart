@@ -12,6 +12,7 @@ import '../screens/worker/job_list_screen.dart';
 import '../screens/worker/job_detail_screen.dart';
 import '../screens/worker/worker_applications_screen.dart';
 import '../screens/creator/creator_home_screen.dart';
+import '../screens/creator/my_jobs_screen.dart';
 import '../screens/creator/post_job_screen.dart';
 import '../screens/creator/creator_applications_screen.dart';
 import '../screens/shared/profile_screen.dart';
@@ -26,7 +27,7 @@ GoRouter buildRouter(AuthProvider auth) {
       final loc = state.matchedLocation;
       final isAuthFlow = loc == '/' || loc == '/entrywork' || loc == '/role-select' || loc.startsWith('/login') || loc == '/profile-setup';
 
-      if (!loggedIn && !isAuthFlow) return '/role-select';
+      if (!loggedIn && !isAuthFlow) return '/entrywork';
       if (loggedIn && (loc == '/entrywork' || loc == '/role-select' || loc.startsWith('/login'))) {
         return auth.currentUser!.role == 'worker' ? '/worker/home' : '/creator/home';
       }
@@ -63,6 +64,7 @@ GoRouter buildRouter(AuthProvider auth) {
         routes: [
           GoRoute(path: '/creator/home', builder: (context, state) => const CreatorHomeScreen()),
           GoRoute(path: '/creator/post-job', builder: (context, state) => const PostJobScreen()),
+          GoRoute(path: '/creator/my-jobs', builder: (context, state) => const MyJobsScreen()),
           GoRoute(path: '/creator/profile', builder: (context, state) => const ProfileScreen()),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/job.dart';
 import '../utils/app_theme.dart';
+import '../utils/format_utils.dart';
 
 class JobCard extends StatelessWidget {
   final Job job;
@@ -29,8 +30,12 @@ class JobCard extends StatelessWidget {
                 spacing: 14,
                 runSpacing: 6,
                 children: [
-                  if (job.distanceKm != null) _iconText('📍', '${job.distanceKm} km away'),
-                  if (job.location.city.isNotEmpty && job.distanceKm == null) _iconText('📍', job.location.city),
+                  _iconText(
+                    '📍',
+                    job.distanceKm != null
+                        ? '${job.location.displayLocation} · ${formatDistance(job.distanceKm!)}'
+                        : job.location.displayLocation,
+                  ),
                   _iconText('📅', dateLabel),
                   _iconText('⏰', '${job.startTime} – ${job.endTime}'),
                 ],
@@ -43,7 +48,23 @@ class JobCard extends StatelessWidget {
                     '₹${job.payment}/${job.paymentUnit}',
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.primary),
                   ),
-                  OutlinedButton(onPressed: onTap, child: const Text('View Job')),
+                  SizedBox(
+                    // The theme's elevatedButtonTheme sets
+                    // minimumSize: Size.fromHeight(56) — i.e. width = ∞ — so the
+                    // button asserts ("BoxConstraints forces an infinite width")
+                    // when it receives unbounded width from this Row's main axis,
+                    // which blanks the entire list. Give it an explicit width.
+                    width: 160,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      ),
+                      onPressed: onTap,
+                      child: const Text('View & Apply', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
                 ],
               ),
             ],

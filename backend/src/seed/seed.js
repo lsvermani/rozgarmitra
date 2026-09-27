@@ -36,6 +36,24 @@ const BASE_LAT = 28.6139;
 const BASE_LNG = 77.209;
 const jitter = () => (Math.random() - 0.5) * 0.2; // ~±11km
 
+const LOCALITIES = [
+  'Connaught Place',
+  'Karol Bagh',
+  'Lajpat Nagar',
+  'Rohini Sector 7',
+  'Saket',
+  'Chandni Chowk',
+  'Dwarka Sector 10',
+  'Mayur Vihar Phase 1',
+  'Hauz Khas',
+  'Janakpuri',
+  'Okhla Phase 3',
+  'Noida Sector 18',
+  'Indirapuram',
+  'Gurugram Cyber City',
+  'Shahdara',
+];
+
 const WORKER_NAMES = ['Ramesh', 'Suresh', 'Amit', 'Raj Kumar', 'Mohan', 'Sanjay', 'Vijay', 'Deepak', 'Anil', 'Pankaj'];
 const WORKER_SKILLS = [
   ['Construction', 'Loading', 'Physical Labour'],
@@ -113,6 +131,7 @@ async function seed() {
       experienceYears: Math.floor(Math.random() * 8) + 1,
       availability: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
       location: {
+        locality: LOCALITIES[i % LOCALITIES.length],
         address: `Sector ${i + 1}, Demo Colony`,
         city: 'New Delhi',
         state: 'Delhi',
@@ -137,6 +156,7 @@ async function seed() {
       mobile: `80000000${String(i + 10).slice(-2)}`,
       role: 'job_creator',
       location: {
+        locality: LOCALITIES[(i + 5) % LOCALITIES.length],
         address: `Industrial Area Phase ${i + 1}`,
         city: 'New Delhi',
         state: 'Delhi',
@@ -171,7 +191,8 @@ async function seed() {
       payment: [400, 500, 600, 700, 800, 900, 1000][Math.floor(Math.random() * 7)],
       paymentUnit: 'day',
       location: {
-        address: `Near ${creator.businessName}`,
+        locality: LOCALITIES[i % LOCALITIES.length],
+        address: `Near ${creator.businessName}, ${LOCALITIES[i % LOCALITIES.length]}`,
         city: 'New Delhi',
         state: 'Delhi',
         pincode: '110020',

@@ -27,8 +27,15 @@ class _LoginScreenState extends State<LoginScreen> {
     }
     try {
       await auth.sendOtp(_mobileCtrl.text.trim(), role: widget.role);
-      setState(() => _otpSent = true);
+      if (!mounted) return;
+      setState(() {
+        _otpSent = true;
+        // In demo mode the backend returns the OTP so it can be auto-filled.
+        final demoOtp = auth.demoOtp;
+        if (demoOtp != null) _otpCtrl.text = demoOtp;
+      });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     }
   }
@@ -48,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
         context.go('/creator/home');
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _error = e.toString());
     }
   }
@@ -83,6 +91,27 @@ class _LoginScreenState extends State<LoginScreen> {
                 maxLength: 6,
                 decoration: const InputDecoration(labelText: 'Enter OTP', counterText: ''),
               ),
+              if (auth.demoOtp != null)
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 16, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Demo mode: OTP ${auth.demoOtp} (auto-filled) — no SMS is sent.',
+                          style: const TextStyle(fontSize: 13, color: AppColors.primaryDark),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
             if (_error != null)
               Padding(

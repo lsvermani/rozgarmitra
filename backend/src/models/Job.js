@@ -20,6 +20,7 @@ const jobSchema = new mongoose.Schema(
 
     location: {
       address: { type: String, default: '' },
+      locality: { type: String, default: '' },
       city: { type: String, default: '' },
       state: { type: String, default: '' },
       pincode: { type: String, default: '' },
@@ -29,11 +30,24 @@ const jobSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['POSTED', 'APPLICATIONS_RECEIVED', 'WORKER_SELECTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'RATED'],
-      default: 'POSTED',
+      enum: [
+        'OPEN',
+        'OFFERS_RECEIVED',
+        'WORKERS_SELECTED',
+        'IN_PROGRESS',
+        'COMPLETED',
+        'CANCELLED',
+        'POSTED',
+        'APPLICATIONS_RECEIVED',
+        'WORKER_SELECTED',
+        'RATED',
+      ],
+      default: 'OPEN',
     },
 
+    offersCount: { type: Number, default: 0 },
     applicationsCount: { type: Number, default: 0 },
+    photos: [{ type: String }],
   },
   { timestamps: true }
 );

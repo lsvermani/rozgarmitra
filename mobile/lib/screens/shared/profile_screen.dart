@@ -2,16 +2,55 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
+import '../../services/location_service.dart';
 import '../../utils/app_theme.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _updatingLocation = false;
+
+  Future<void> _updateLocality() async {
+    setState(() => _updatingLocation = true);
+    final scaffold = ScaffoldMessenger.of(context);
+    try {
+      // GPS-only: fetch live GPS; surfaces a clear message when GPS is
+      // off / denied / timed out instead of silently using IP/cached data.
+      final loc = await LocationService.fetchGpsLocation();
+      if (!mounted) return;
+      final api = context.read<ApiService>();
+      final auth = context.read<AuthProvider>();
+      await api.put('/users/profile', {
+        'location': loc.toJson(),
+      });
+      await auth.refreshProfile();
+      scaffold.showSnackBar(
+        SnackBar(content: Text('✅ GPS locality updated to ${loc.displayLocation}')),
+      );
+    } on LocationException catch (e) {
+      scaffold.showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (e) {
+      scaffold.showSnackBar(SnackBar(content: Text('Failed to update location: $e')));
+    } finally {
+      if (mounted) setState(() => _updatingLocation = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = auth.currentUser;
     if (user == null) return const SizedBox.shrink();
+
+    final locationDisplay = user.location?.displayLocation.isNotEmpty == true
+        ? user.location!.displayLocation
+        : 'Location not set';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
@@ -29,7 +68,12 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Center(child: Text(user.businessName ?? user.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
+          Center(
+            child: Text(
+              user.businessName ?? user.name,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+            ),
+          ),
           Center(child: Text(user.mobile, style: const TextStyle(color: AppColors.textMuted))),
           const SizedBox(height: 8),
           Center(
@@ -39,11 +83,63 @@ class ProfileScreen extends StatelessWidget {
                 Text('⭐ ${user.rating.toStringAsFixed(1)} (${user.ratingCount})'),
                 const SizedBox(width: 12),
                 if (user.verified)
-                  const Chip(label: Text('Verified ✓'), backgroundColor: AppColors.primaryLight, visualDensity: VisualDensity.compact),
+                  const Chip(
+                    label: Text('Verified ✓'),
+                    backgroundColor: AppColors.primaryLight,
+                    visualDensity: VisualDensity.compact,
+                  ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+
+          // Locality Card
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.location_on, color: AppColors.primary, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Locality / Area',
+                        style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        locationDisplay,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                      ),
+                      if (user.location?.latitude != null && user.location?.longitude != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'GPS: ${user.location!.latitude!.toStringAsFixed(4)}, ${user.location!.longitude!.toStringAsFixed(4)}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _updatingLocation ? null : _updateLocality,
+                  icon: _updatingLocation
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.my_location, size: 16),
+                  label: Text(_updatingLocation ? 'Updating...' : 'Update'),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
           if (user.role == 'worker') ...[
             const Text('Skills', style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
@@ -60,7 +156,7 @@ class ProfileScreen extends StatelessWidget {
           OutlinedButton(
             onPressed: () async {
               await auth.logout();
-              if (context.mounted) context.go('/role-select');
+              if (context.mounted) context.go('/entrywork');
             },
             child: const Text('Log Out'),
           ),

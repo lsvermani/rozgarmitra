@@ -49,7 +49,7 @@ class BottomNavShell extends StatelessWidget {
           context.go('/creator/post-job');
           break;
         case 2:
-          context.go('/creator/home'); // "My Jobs" is shown on the dashboard for MVP
+          context.go('/creator/my-jobs');
           break;
         case 3:
           context.go('/creator/profile');

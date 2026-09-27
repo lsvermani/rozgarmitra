@@ -10,6 +10,7 @@ router.post(
   [
     body('mobile').matches(/^[6-9]\d{9}$/).withMessage('Enter a valid 10-digit Indian mobile number.'),
     body('role').optional().isIn(['worker', 'job_creator']),
+    body('name').optional().trim().isLength({ min: 2, max: 60 }).withMessage('Name must be between 2 and 60 characters.'),
   ],
   validate,
   sendOtp
@@ -20,6 +21,8 @@ router.post(
   [
     body('mobile').matches(/^[6-9]\d{9}$/).withMessage('Enter a valid 10-digit Indian mobile number.'),
     body('otp').isLength({ min: 4, max: 6 }).withMessage('Enter a valid OTP.'),
+    body('role').optional().isIn(['worker', 'job_creator', 'admin']),
+    body('name').optional().trim().isLength({ min: 2, max: 60 }).withMessage('Name must be between 2 and 60 characters.'),
   ],
   validate,
   verifyOtp

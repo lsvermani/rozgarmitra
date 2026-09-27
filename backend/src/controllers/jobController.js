@@ -118,14 +118,29 @@ async function listJobs(req, res, next) {
     let paginated = jobs.slice(start, start + limitNum);
 
     if (req.user?.role === 'worker' && paginated.length > 0) {
-      const applications = await Application.find({
-        workerId: req.user._id,
-        jobId: { $in: paginated.map((job) => job._id) },
-      }).select('jobId status');
+      const WorkerOffer = require('../models/WorkerOffer');
+      const [applications, offers] = await Promise.all([
+        Application.find({
+          workerId: req.user._id,
+          jobId: { $in: paginated.map((job) => job._id) },
+        }).select('jobId status'),
+        WorkerOffer.find({
+          workerId: req.user._id,
+          jobId: { $in: paginated.map((job) => job._id) },
+          status: { $in: ['PENDING', 'ACCEPTED', 'REJECTED'] },
+        }).sort({ createdAt: -1 }),
+      ]);
       const applicationsByJob = new Map(applications.map((application) => [application.jobId.toString(), application]));
+      const offersByJob = new Map();
+      offers.forEach((o) => {
+        if (!offersByJob.has(o.jobId.toString())) {
+          offersByJob.set(o.jobId.toString(), o);
+        }
+      });
       paginated = paginated.map((job) => ({
         ...job,
         myApplication: applicationsByJob.get(job._id.toString()) || null,
+        myOffer: offersByJob.get(job._id.toString()) || null,
       }));
     }
 
@@ -151,11 +166,18 @@ async function getJob(req, res, next) {
     if (!job) return res.status(404).json({ success: false, message: 'Job not found.' });
 
     let myApplication = null;
+    let myOffer = null;
     if (req.user && req.user.role === 'worker') {
+      const WorkerOffer = require('../models/WorkerOffer');
       myApplication = await Application.findOne({ jobId: job._id, workerId: req.user._id });
+      myOffer = await WorkerOffer.findOne({
+        jobId: job._id,
+        workerId: req.user._id,
+        status: { $in: ['PENDING', 'ACCEPTED', 'REJECTED'] },
+      }).sort({ createdAt: -1 });
     }
 
-    res.json({ success: true, job, myApplication });
+    res.json({ success: true, job, myApplication, myOffer });
   } catch (err) {
     next(err);
   }
@@ -258,12 +280,12 @@ async function completeJob(req, res, next) {
     job.status = 'COMPLETED';
     await job.save();
 
-    const selectedApps = await Application.find({ jobId: job._id, status: 'SELECTED' });
-    await Application.updateMany({ jobId: job._id, status: 'SELECTED' }, { status: 'COMPLETED' });
+    const selectedApps = await Application.find({ jobId: job._id, status: { $in: ['SELECTED', 'ACCEPTED'] } });
+    await Application.updateMany({ jobId: job._id, status: { $in: ['SELECTED', 'ACCEPTED'] } }, { status: 'COMPLETED' });
 
     await Promise.all(
       selectedApps.map(async (app) => {
-        await User.findByIdAndUpdate(app.workerId, { $inc: { completedJobs: 1 } });
+        await User.findByIdAndUpdate(app.workerId, { $inc: { completedJobs: 1, totalJobs: 1 } });
         await notify(
           app.workerId,
           'Job marked completed',

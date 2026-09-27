@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- RM magnifier mark: teal lens + handle, R teal / M orange -->
+  <circle cx="54" cy="54" r="38" fill="#ffffff" stroke="#0e6b62" stroke-width="10"/>
+  <path d="M30 38 A30 30 0 0 1 58 24" fill="none" stroke="#0e6b62" stroke-width="6" stroke-linecap="round"/>
+  <rect x="79" y="79" width="18" height="38" rx="9" fill="#0e6b62" transform="rotate(-45 88 98)"/>
+  <text x="54" y="67" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="900" font-size="30" letter-spacing="0.5"><tspan fill="#0e6b62">R</tspan><tspan fill="#ef6a0a">M</tspan></text>
+</svg>

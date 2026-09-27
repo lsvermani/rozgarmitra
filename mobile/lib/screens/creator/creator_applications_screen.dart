@@ -101,7 +101,7 @@ class _CreatorApplicationsScreenState extends State<CreatorApplicationsScreen> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                         decoration: BoxDecoration(
-                                          color: _statusColor(a.status).withOpacity(0.12),
+                                          color: _statusColor(a.status).withValues(alpha: 0.12),
                                           borderRadius: BorderRadius.circular(20),
                                         ),
                                         child: Text(a.status,

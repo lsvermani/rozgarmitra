@@ -5,3 +5,5 @@ build/
 .flutter-plugins-dependencies
 *.iml
 .idea/
+# Widget Preview related
+.widget_preview/

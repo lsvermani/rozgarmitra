@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/job_provider.dart';
+import '../../services/location_service.dart';
+import '../../utils/app_theme.dart';
+import '../../widgets/current_location_bar.dart';
 import '../../widgets/job_card.dart';
 
 const List<String> kCategories = ['Construction', 'Household', 'Shops & Businesses', 'Events'];
@@ -18,11 +21,57 @@ class _JobListScreenState extends State<JobListScreen> {
   final _searchCtrl = TextEditingController();
   String? _category;
   String? _distance;
+  LocationData? _location;
+  bool _fetchingLocation = false;
+  String? _locationError;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => context.read<JobProvider>().fetchJobs());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initLocation());
+  }
+
+  Future<void> _initLocation() async {
+    final jobProvider = context.read<JobProvider>();
+
+    // Show last-known fix instantly so the list renders, then always
+    // replace it with a fresh live GPS fix below.
+    final cached = await LocationService.getCachedLocation();
+    if (cached != null && mounted) {
+      setState(() => _location = cached);
+      jobProvider.setLocation(cached.latitude, cached.longitude);
+      jobProvider.fetchJobs();
+    } else {
+      jobProvider.fetchJobs();
+    }
+
+    // GPS-first: always fetch live GPS when the Jobs tab opens.
+    await _refreshLocation();
+  }
+
+  Future<void> _refreshLocation() async {
+    if (!mounted) return;
+    setState(() {
+      _fetchingLocation = true;
+      _locationError = null;
+    });
+
+    try {
+      final loc = await LocationService.fetchGpsLocation();
+      if (!mounted) return;
+      setState(() => _location = loc);
+      final jobProvider = context.read<JobProvider>();
+      jobProvider.setLocation(loc.latitude, loc.longitude);
+      _applyFilters();
+    } on LocationException catch (e) {
+      if (!mounted) return;
+      setState(() => _locationError = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _locationError = 'Could not detect GPS location. Tap to retry.');
+    } finally {
+      if (mounted) setState(() => _fetchingLocation = false);
+    }
   }
 
   void _applyFilters() {
@@ -45,6 +94,14 @@ class _JobListScreenState extends State<JobListScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                // Current GPS locality + city — pinned top-left, above filters.
+                CurrentLocationBar(
+                  location: _location,
+                  fetching: _fetchingLocation,
+                  error: _locationError,
+                  onRefresh: _refreshLocation,
+                ),
+                const SizedBox(height: 10),
                 TextField(
                   controller: _searchCtrl,
                   decoration: InputDecoration(
@@ -55,6 +112,18 @@ class _JobListScreenState extends State<JobListScreen> {
                   onSubmitted: (_) => _applyFilters(),
                 ),
                 const SizedBox(height: 10),
+
+                Row(
+                  children: [
+                    if (_distance != null)
+                      Text(
+                        'within $_distance km',
+                        style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -97,13 +166,16 @@ class _JobListScreenState extends State<JobListScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : jobProvider.jobs.isEmpty
                     ? const Center(child: Text('No jobs match your filters.'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        itemCount: jobProvider.jobs.length,
-                        itemBuilder: (context, i) {
-                          final job = jobProvider.jobs[i];
-                          return JobCard(job: job, onTap: () => context.push('/worker/jobs/${job.id}'));
-                        },
+                    : Scrollbar(
+                        thumbVisibility: true,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          itemCount: jobProvider.jobs.length,
+                          itemBuilder: (context, i) {
+                            final job = jobProvider.jobs[i];
+                            return JobCard(job: job, onTap: () => context.push('/worker/jobs/${job.id}'));
+                          },
+                        ),
                       ),
           ),
         ],

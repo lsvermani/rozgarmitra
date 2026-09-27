@@ -9,8 +9,8 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const load = useCallback(() => {
-    setLoading(true);
+  // Fetch only — the spinner is toggled by the events that trigger a reload.
+  const fetchReports = useCallback(() => {
     adminApi
       .getReports({ status: status || undefined })
       .then((res) => setReports(res.data.reports))
@@ -18,7 +18,14 @@ export default function Reports() {
       .finally(() => setLoading(false));
   }, [status]);
 
-  useEffect(load, [load]);
+  // Used after status updates and by the filter, where showing the spinner is expected.
+  const load = useCallback(() => {
+    setLoading(true);
+    fetchReports();
+  }, [fetchReports]);
+
+  // `loading` starts as true, so the initial fetch does not need to set it.
+  useEffect(() => { fetchReports(); }, [fetchReports]);
 
   const handleStatusChange = async (id, newStatus) => {
     await adminApi.updateReport(id, newStatus);
@@ -30,7 +37,15 @@ export default function Reports() {
       <h2 style={{ marginTop: 0 }}>Reports & Complaints</h2>
 
       <div className="rm-filters">
-        <select className="rm-select" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <select
+          className="rm-select"
+          value={status}
+          onChange={(e) => {
+            // Spinner is toggled by the event that changes the filter, not by the effect.
+            setLoading(true);
+            setStatus(e.target.value);
+          }}
+        >
           <option value="">All statuses</option>
           <option value="OPEN">Open</option>
           <option value="REVIEWING">Reviewing</option>

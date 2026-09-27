@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/location_service.dart';
 import '../../utils/app_theme.dart';
+import '../../widgets/current_location_bar.dart';
 
 class CreatorHomeScreen extends StatefulWidget {
   const CreatorHomeScreen({super.key});
@@ -15,11 +17,36 @@ class CreatorHomeScreen extends StatefulWidget {
 class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
   List<dynamic> _myJobs = [];
   bool _loading = true;
+  LocationData? _gpsLocation;
+  bool _fetchingLocation = false;
+  String? _locationError;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _fetchGps();
+  }
+
+  Future<void> _fetchGps() async {
+    if (!mounted) return;
+    setState(() {
+      _fetchingLocation = true;
+      _locationError = null;
+    });
+    try {
+      final loc = await LocationService.fetchGpsLocation();
+      if (!mounted) return;
+      setState(() => _gpsLocation = loc);
+    } on LocationException catch (e) {
+      if (!mounted) return;
+      setState(() => _locationError = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _locationError = 'Could not detect GPS location. Tap to retry.');
+    } finally {
+      if (mounted) setState(() => _fetchingLocation = false);
+    }
   }
 
   Future<void> _load() async {
@@ -46,15 +73,37 @@ class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
     final totalApplications = _myJobs.fold<int>(0, (sum, j) => sum + ((j['applicationsCount'] ?? 0) as int));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Rozgarmitra')),
+      appBar: AppBar(
+        title: const Text('Rozgarmitra'),
+        actions: [
+          IconButton(
+            tooltip: 'Notifications',
+            icon: const Icon(Icons.notifications_none_rounded),
+            onPressed: () => context.push('/notifications'),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Text('Welcome, ${auth.currentUser?.businessName ?? auth.currentUser?.name ?? "Job Creator"}',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 16),
+        onRefresh: () async {
+          await _load();
+          await _fetchGps();
+        },
+        child: Scrollbar(
+          thumbVisibility: true,
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              // Current GPS locality + city — pinned top-left under the tab bar.
+              CurrentLocationBar(
+                location: _gpsLocation,
+                fetching: _fetchingLocation,
+                error: _locationError,
+                onRefresh: _fetchGps,
+              ),
+              const SizedBox(height: 10),
+              Text('Welcome, ${auth.currentUser?.businessName ?? auth.currentUser?.name ?? "Job Creator"}',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
             Row(
               children: [
                 _StatCard(label: 'Active Jobs', value: '$active'),
@@ -66,30 +115,64 @@ class _CreatorHomeScreenState extends State<CreatorHomeScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
-              onPressed: () async {
-                final posted = await context.push<bool>('/creator/post-job');
-                if (posted == true && mounted) _load();
+              onPressed: () {
+                // PostJobScreen is a ShellRoute tab branch — navigate with `go()`
+                // (not `push()`), otherwise pop()/return-value handling breaks.
+                context.go('/creator/post-job');
               },
               icon: const Icon(Icons.add),
               label: const Text('POST A JOB'),
             ),
             const SizedBox(height: 24),
-            const Text('My Active Jobs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('My Active Jobs', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                TextButton(
+                  onPressed: () => context.go('/creator/my-jobs'),
+                  child: const Text('View all'),
+                ),
+              ],
+            ),
             const SizedBox(height: 12),
             if (_loading) const Center(child: CircularProgressIndicator()),
             if (!_loading && _myJobs.isEmpty) const Text('You haven\'t posted any jobs yet.'),
-            ..._myJobs.map((j) => Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    title: Text(j['title'], style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text('${j['applicationsCount'] ?? 0} Applications · ₹${j['payment']}/${j['paymentUnit']}'),
-                    trailing: TextButton(
-                      onPressed: () => context.push('/creator/applications/${j['_id']}'),
-                      child: const Text('View'),
-                    ),
+            // Created jobs — bounded box with its own always-visible scrollbar,
+            // so mouse-wheel / drag scrolls the job list without moving the page.
+            if (!_loading && _myJobs.isNotEmpty)
+              SizedBox(
+                height: 320,
+                child: Scrollbar(
+                  thumbVisibility: true,
+                  child: ListView.builder(
+                    itemCount: _myJobs.length,
+                    itemBuilder: (context, index) {
+                      final j = _myJobs[index];
+                      final loc = j['location'];
+                      final locLabel = loc is Map
+                          ? ((loc['locality'] != null && loc['locality'].toString().isNotEmpty)
+                              ? loc['locality']
+                              : (loc['city'] ?? ''))
+                          : '';
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12, right: 8),
+                        child: ListTile(
+                          title: Text(j['title'], style: const TextStyle(fontWeight: FontWeight.w700)),
+                          subtitle: Text(
+                            '${j['applicationsCount'] ?? 0} Applications · ₹${j['payment']}/${j['paymentUnit']}${locLabel.toString().isNotEmpty ? ' · 📍 $locLabel' : ''}',
+                          ),
+                          trailing: TextButton(
+                            onPressed: () => context.push('/creator/applications/${j['_id']}'),
+                            child: const Text('View'),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                )),
-          ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

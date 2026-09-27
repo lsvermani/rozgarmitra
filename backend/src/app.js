@@ -16,6 +16,8 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const locationRoutes = require('./routes/locationRoutes');
+const offerRoutes = require('./routes/offerRoutes');
 
 const app = express();
 
@@ -38,6 +40,15 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Rozgarmitra API is running.',
+    health: '/api/health',
+    mode: process.env.APP_MODE || 'demo',
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
@@ -56,6 +67,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/location', locationRoutes);
+app.use('/api/offers', offerRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

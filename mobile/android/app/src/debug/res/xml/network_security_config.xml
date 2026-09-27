@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Development-only network policy (lives in src/debug, so it is never
+     merged into release builds). Android blocks cleartext HTTP by default on
+     API 28+, which would break calls to the local backend
+     (default API_BASE_URL is http://10.0.2.2:5000/api). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
+import BrandMark from '../components/BrandMark';
+import LanguageTabs from '../components/LanguageTabs';
 
 export default function Login() {
   const [step, setStep] = useState('mobile'); // 'mobile' | 'otp'
@@ -40,14 +42,14 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      const res = await authApi.verifyOtp(mobile, otp);
+      const res = await authApi.verifyOtp(mobile, otp, 'admin');
       if (res.data.user.role !== 'admin') {
         setError('This account is not an admin account.');
         setLoading(false);
         return;
       }
       login(res.data.token, res.data.user);
-      navigate('/');
+      navigate('/admin');
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid OTP.');
     } finally {
@@ -57,9 +59,10 @@ export default function Login() {
 
   return (
     <div className="rm-login-page">
+      <LanguageTabs />
       <div className="rm-login-box">
-        <h1>Rozgarmitra</h1>
-        <p className="tagline">Kaam bhi, Rozgar bhi. — Admin Panel</p>
+        <h1 className="rm-login-title"><BrandMark size={40} />Rozgarmitra</h1>
+        <p className="tagline">Super Admin login — platform control center</p>
 
         {step === 'mobile' && (
           <form onSubmit={handleSendOtp}>
@@ -77,7 +80,7 @@ export default function Login() {
             </button>
             <p className="rm-hint">Demo admin mobile: 9999999999</p>
             <p className="rm-login-switch">
-              Looking for work? <a href="/worker/login">Open worker dashboard</a>
+              Looking for work? <a href={`${import.meta.env.BASE_URL}entrywork`}>Open worker dashboard</a>
             </p>
           </form>
         )}

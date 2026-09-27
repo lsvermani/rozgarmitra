@@ -1,27 +1,41 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
+import { LanguageProvider } from './context/LanguageContext';
+import { LocationProvider } from './context/LocationContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Jobs from './pages/Jobs';
 import Reports from './pages/Reports';
+import Applications from './pages/Applications';
 import WorkerLogin from './pages/WorkerLogin';
 import WorkerDashboard from './pages/WorkerDashboard';
 import ProductPreview from './pages/ProductPreview';
 import EntryWork from './pages/EntryWork';
+import LoginRM from './pages/LoginRM';
+import PublicApp from './pages/PublicApp';
 import './styles.css';
 
-function ProtectedRoute({ children }) {
+/**
+ * The production build is served from a sub-path (see `base` in vite.config.js),
+ * so the router must strip that prefix. `BASE_URL` is '/' in dev and ends with a
+ * slash in build output — React Router expects no trailing slash.
+ */
+const routerBase = import.meta.env.BASE_URL.replace(/\/+$/, '') || '/';
+
+function AdminOrCreatorRoute({ children }) {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/entrywork" replace />;
+  if (!['admin', 'job_creator'].includes(user.role)) return <Navigate to="/entrywork" replace />;
   return children;
 }
 
 function WorkerRoute({ children }) {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/worker/login" replace />;
-  if (user.role !== 'worker') return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/entrywork" replace />;
+  if (user.role !== 'worker') return <Navigate to="/entrywork" replace />;
   return children;
 }
 
@@ -30,7 +44,15 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/entrywork" element={<EntryWork />} />
+      <Route path="/login-rm" element={<LoginRM />} />
       <Route path="/worker/login" element={<WorkerLogin />} />
+      <Route path="/find-work" element={<PublicApp />} />
+      <Route path="/register" element={<PublicApp />} />
+      <Route path="/job/:id" element={<PublicApp />} />
+      <Route path="/terms" element={<PublicApp />} />
+      <Route path="/privacy" element={<PublicApp />} />
+      <Route path="/contact" element={<PublicApp />} />
+      <Route path="/" element={<PublicApp />} />
       <Route
         path="/worker"
         element={
@@ -40,16 +62,17 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/"
+        path="/admin"
         element={
-          <ProtectedRoute>
+          <AdminOrCreatorRoute>
             <Layout />
-          </ProtectedRoute>
+          </AdminOrCreatorRoute>
         }
       >
         <Route index element={<Dashboard />} />
         <Route path="users" element={<Users />} />
         <Route path="jobs" element={<Jobs />} />
+        <Route path="applications" element={<Applications />} />
         <Route path="reports" element={<Reports />} />
         <Route path="preview" element={<ProductPreview />} />
       </Route>
@@ -59,10 +82,14 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </AuthProvider>
+    <LanguageProvider>
+      <LocationProvider>
+        <AuthProvider>
+          <BrowserRouter basename={routerBase}>
+            <AppRoutes />
+          </BrowserRouter>
+        </AuthProvider>
+      </LocationProvider>
+    </LanguageProvider>
   );
 }

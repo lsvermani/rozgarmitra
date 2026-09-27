@@ -44,7 +44,7 @@ async function updateProfile(req, res, next) {
 async function getUserById(req, res, next) {
   try {
     const user = await User.findById(req.params.id).select(
-      'name role businessName profilePhoto skills categories experienceYears availability rating ratingCount totalJobs completedJobs verified location.city location.state'
+      'name role businessName profilePhoto skills categories experienceYears availability rating ratingCount totalJobs completedJobs verified location.locality location.city location.state'
     );
     if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
     res.json({ success: true, user });

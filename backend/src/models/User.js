@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const locationSchema = new mongoose.Schema(
   {
     address: { type: String, default: '' },
+    locality: { type: String, default: '' },
     city: { type: String, default: '' },
     state: { type: String, default: '' },
     pincode: { type: String, default: '' },
@@ -18,7 +19,6 @@ const userSchema = new mongoose.Schema(
     mobile: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
       match: [/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number'],
     },
@@ -59,5 +59,6 @@ const userSchema = new mongoose.Schema(
 
 userSchema.index({ 'location.latitude': 1, 'location.longitude': 1 });
 userSchema.index({ role: 1 });
+userSchema.index({ mobile: 1, role: 1 }, { unique: true });
 
 module.exports = mongoose.model('User', userSchema);
