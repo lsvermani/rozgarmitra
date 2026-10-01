@@ -162,6 +162,20 @@ class _AdminSettingsFormState extends State<_AdminSettingsForm> {
 
     final result = await _config.test(candidate);
     if (!mounted) return;
+    // Rebuild the controllers from what the administrator typed *before*
+    // assigning _result: tester.pumpAndSettle() in widget tests (and a slow
+    // setState coalescing on device) can otherwise rebuild this form first,
+    // wiping the controllers back to the saved config and making the banner
+    // + preview disagree with the entry. Controllers still win over saved
+    // state on every build.
+    _baseUrl.text = candidate.serverBaseUrl;
+    _ip.text = candidate.serverIp;
+    _port.text = candidate.serverPort?.toString() ?? '';
+    _forwarded.text = candidate.forwardedUrl;
+    _apiPath.text = candidate.apiBasePath;
+    _environment = candidate.environment;
+    _useForwarded = candidate.useForwardedUrl;
+    _allowSaveWithoutTest = candidate.allowSaveWithoutTest;
     setState(() {
       _testing = false;
       _result = result;

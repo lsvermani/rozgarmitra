@@ -165,7 +165,7 @@ void main() {
   });
 
   testWidgets('a successful test enables saving and probes the live address', (tester) async {
-    late Uri probed;
+    Uri? probed;
     await pumpSettings(
       tester,
       storage: storageWithPasscode(),
@@ -186,7 +186,7 @@ void main() {
     await tapText(tester, 'Test Connection');
     await tester.pumpAndSettle();
 
-    expect(probed.toString(), 'https://api.example.com/api/health');
+    expect(probed?.toString(), 'https://api.example.com/api/health');
     // Banner and "Save" rebuild a few frames after the async probe + audit
     // write; give the test clock generous virtual time rather than a single
     // 50 ms pump (flaky on slow hosts).
