@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 
+import 'package:rozgarmitra/config/config_manager.dart';
+import 'package:rozgarmitra/config/config_store.dart';
+import 'package:rozgarmitra/config/secure_store.dart';
 import 'package:rozgarmitra/screens/auth/entrywork_screen.dart';
 import 'package:rozgarmitra/utils/app_theme.dart';
 
@@ -10,12 +14,22 @@ import 'package:rozgarmitra/utils/app_theme.dart';
 void main() {
   testWidgets('EntryWorkScreen hero shows the RozgarMitra brand mark',
       (WidgetTester tester) async {
+    // In-memory store: the real SecureStore would hit the platform keystore,
+    // whose MethodChannel can hang in widget tests (no native platform here).
+    final manager = ConfigManager(store: ConfigStore(storage: InMemoryKeyValueStore()));
+    await manager.load();
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: const EntryWorkScreen(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<ConfigManager>.value(value: manager),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const EntryWorkScreen(),
+        ),
       ),
     );
+    await tester.pump();
 
     expect(find.text('ENTRYWORK'), findsNothing);
 

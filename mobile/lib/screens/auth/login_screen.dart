@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 import '../../utils/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -18,9 +19,17 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _otpSent = false;
   String? _error;
 
+  /// True when the last failure looked like "cannot reach the server", which is
+  /// the signal that the saved backend address may be wrong. Surfaces the
+  /// administrator's recovery path (Server settings) right on the login screen.
+  bool _serverUnreachable = false;
+
   Future<void> _sendOtp() async {
     final auth = context.read<AuthProvider>();
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _serverUnreachable = false;
+    });
     if (_mobileCtrl.text.trim().length != 10) {
       setState(() => _error = 'Enter a valid 10-digit mobile number.');
       return;
@@ -36,13 +45,19 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() {
+        _error = e.toString();
+        _serverUnreachable = e is ApiException && e.isNetworkError;
+      });
     }
   }
 
   Future<void> _verifyOtp() async {
     final auth = context.read<AuthProvider>();
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _serverUnreachable = false;
+    });
     try {
       await auth.verifyOtp(_mobileCtrl.text.trim(), _otpCtrl.text.trim(), role: widget.role);
       if (!mounted) return;
@@ -56,7 +71,10 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e.toString());
+      setState(() {
+        _error = e.toString();
+        _serverUnreachable = e is ApiException && e.isNetworkError;
+      });
     }
   }
 
@@ -117,6 +135,17 @@ class _LoginScreenState extends State<LoginScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(_error!, style: const TextStyle(color: AppColors.danger)),
+              ),
+            // Recovery path: the saved backend may be wrong or offline, so let an
+            // administrator open the protected server settings page from here.
+            if (_serverUnreachable)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => context.push('/admin/server-settings'),
+                  icon: const Icon(Icons.settings_outlined, size: 18),
+                  label: const Text('Server unreachable — open server settings'),
+                ),
               ),
             const SizedBox(height: 20),
             ElevatedButton(

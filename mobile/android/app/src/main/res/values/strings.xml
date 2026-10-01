@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher label. Kept in a resource so it can be localised (en / hi / pa)
+         without touching the manifest. -->
+    <string name="app_name">RozgarMitra</string>
+</resources>

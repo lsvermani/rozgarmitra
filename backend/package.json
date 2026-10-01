@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed": "node src/seed/seed.js"
+    "seed": "node src/seed/seed.js",
+    "db:check": "node scripts/mongo-connect.js",
+    "db:setup": "node scripts/mongo-connect.js --indexes",
+    "db:json": "node scripts/mongo-connect.js --json",
+    "db:atlas": "node scripts/mongo-connect.js --indexes --uri"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

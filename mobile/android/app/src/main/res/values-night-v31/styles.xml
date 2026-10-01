@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ dark-mode variant. The `night` qualifier wins over `v31`, so
+     without this file a dark-mode device would fall back to the unbranded
+     launch theme. Same branded splash, black window parent. -->
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">@color/brand_primary</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/ic_launcher_background</item>
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+</resources>

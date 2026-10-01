@@ -1,7 +1,7 @@
 name: rozgarmitra
 description: Rozgarmitra - Local Jobs & Daily-Wage Worker Platform
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -21,6 +21,8 @@ dependencies:
   go_router: ^14.3.0          # declarative navigation
   firebase_core: ^3.8.0
   firebase_auth: ^5.3.3
+  flutter_secure_storage: ^11.2.0  # encrypted store for server config + admin passcode
+  crypto: ^3.0.7                    # PBKDF2-HMAC-SHA256 for the recovery passcode
 
 dev_dependencies:
   flutter_test:

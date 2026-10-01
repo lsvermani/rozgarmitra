@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../utils/app_theme.dart';
+import '../config/config_manager.dart';
 
 class LocationData {
   final String locality;
@@ -261,7 +261,8 @@ class LocationService {
 
     // 3. Try Backend API reverse endpoint
     try {
-      final backendUrl = Uri.parse('${AppConstants.apiBaseUrl}/location/reverse?lat=$lat&lng=$lng');
+      final backendUrl =
+          Uri.parse('${ConfigManager.currentApiBaseUrl}/location/reverse?lat=$lat&lng=$lng');
       final res = await http.get(backendUrl).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);
@@ -285,7 +286,7 @@ class LocationService {
   static Future<LocationData?> _fetchFromInternetIp() async {
     // Try backend detect endpoint first
     try {
-      final backendUrl = Uri.parse('${AppConstants.apiBaseUrl}/location/detect');
+      final backendUrl = Uri.parse('${ConfigManager.currentApiBaseUrl}/location/detect');
       final res = await http.get(backendUrl).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         final body = jsonDecode(res.body);

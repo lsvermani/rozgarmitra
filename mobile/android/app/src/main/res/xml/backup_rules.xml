@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup rules for devices up to Android 11 (API 30).
+
+  Backups are disabled for the whole app (android:allowBackup="false" in the
+  manifest) because the Server / Admin Settings configuration and the
+  administrator recovery passcode are stored in the Android Keystore-encrypted
+  store. Restoring that data onto a different device would produce a config that
+  cannot be decrypted there. Users simply sign in again after switching phones.
+-->
+<full-backup-content>
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+</full-backup-content>

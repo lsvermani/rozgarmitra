@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../config/config_manager.dart';
 import '../../utils/app_theme.dart';
 
 /// Onboarding / entry screen — chooses Worker vs Job Creator login.
@@ -160,6 +162,18 @@ class EntryWorkScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 18),
+                  // Fresh install / unconfigured device: give an administrator a
+                  // way in without a working login. Once a server has been saved
+                  // this disappears, so ordinary users never see it.
+                  if (!context.watch<ConfigManager>().isConfigured)
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () => context.push('/admin/server-settings'),
+                        icon: const Icon(Icons.settings_outlined, size: 18),
+                        label: const Text('Server settings'),
+                      ),
+                    ),
                 ],
               ),
             ),

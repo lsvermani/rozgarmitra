@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  RELEASE network policy for RozgarMitra.
+
+  Plain HTTP is BLOCKED by default ("Avoid enabling unrestricted cleartext HTTP
+  traffic in production"): the app's Server / Admin Settings page requires
+  https:// whenever the environment is Production, and everything else here is
+  blocked by the platform.
+
+  `domain-config` below only whitelists host addresses that cannot exist on a
+  public network (the Android emulator's host loopback and the device's own
+  loopback), so a release build can still be tested against a local backend.
+
+  To allow one specific host over plain HTTP — for example an on-premise server
+  at http://192.168.1.100:8080 — add its host name or IP inside a
+  <domain-config> block and rebuild:
+
+      <domain-config cleartextTrafficPermitted="true">
+          <domain includeSubdomains="true">192.168.1.100</domain>
+      </domain-config>
+
+  Debug builds deliberately keep the permissive policy in
+  src/debug/res/xml/network_security_config.xml, so emulator development is
+  unaffected.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Emulator -> host machine (used only while testing). -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <!-- Local loopback (Flutter web / desktop against a local backend). -->
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

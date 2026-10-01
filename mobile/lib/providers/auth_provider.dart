@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,11 +15,17 @@ class AuthProvider extends ChangeNotifier {
   String? verificationId;
   String? authError;
 
+  /// True when a saved session could only be restored from the on-device cache
+  /// because the backend was unreachable. The token is kept (it is not expired
+  /// as far as we know) and the next successful request clears this flag.
+  bool offlineSession = false;
+
   /// OTP handed back by the backend while APP_MODE=demo, so the login screen
   /// can auto-fill it. Stays null when Firebase phone auth is in use.
   String? demoOtp;
 
   AuthProvider(this.api);
+
 
   bool get isLoggedIn => currentUser != null && token != null;
 
@@ -32,17 +39,65 @@ class AuthProvider extends ChangeNotifier {
   Future<void> restoreSession() async {
     final prefs = await SharedPreferences.getInstance();
     final savedToken = prefs.getString('rm_token');
-    if (savedToken != null) {
-      token = savedToken;
-      api.setToken(savedToken);
+    if (savedToken == null) {
+      notifyListeners();
+      return;
+    }
+
+    token = savedToken;
+    api.setToken(savedToken);
+
+    // Show the last known profile immediately so the app opens instantly (and
+    // still opens when the device is offline).
+    final cached = prefs.getString('rm_user');
+    if (cached != null) {
       try {
-        final res = await api.get('/users/profile');
-        currentUser = AppUser.fromJson(res['user']);
+        currentUser = AppUser.fromJson(jsonDecode(cached) as Map<String, dynamic>);
       } catch (_) {
-        await logout();
+        currentUser = null;
       }
     }
     notifyListeners();
+
+    // Then confirm with the server. Only a real 401/403 ends the session — a
+    // flaky network must not log the user out.
+    try {
+      final res = await api.get('/users/profile');
+      currentUser = AppUser.fromJson(res['user']);
+      offlineSession = false;
+      await _persistUser(res['user']);
+    } on ApiException catch (error) {
+      if (error.isAuthError) {
+        await logout();
+        return;
+      }
+      offlineSession = true;
+    } catch (_) {
+      offlineSession = true;
+    }
+    notifyListeners();
+  }
+
+  /// Retries the profile fetch after an offline start (called by the UI when the
+  /// network comes back).
+  Future<bool> retrySession() async {
+    if (token == null) return false;
+    try {
+      final res = await api.get('/users/profile');
+      currentUser = AppUser.fromJson(res['user']);
+      offlineSession = false;
+      await _persistUser(res['user']);
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _persistUser(Map<String, dynamic>? raw) async {
+    if (raw == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('rm_user', jsonEncode(raw));
   }
 
   Future<void> sendOtp(String mobile, {String? role}) async {
@@ -139,9 +194,11 @@ class AuthProvider extends ChangeNotifier {
     token = res['token'];
     currentUser = AppUser.fromJson(res['user']);
     api.setToken(token);
+    offlineSession = false;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('rm_token', token!);
+    await _persistUser(res['user']);
     return res;
   }
 
@@ -149,15 +206,20 @@ class AuthProvider extends ChangeNotifier {
     if (_isFirebaseReady) await FirebaseAuth.instance.signOut();
     token = null;
     currentUser = null;
+    offlineSession = false;
     api.setToken(null);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('rm_token');
+    await prefs.remove('rm_user');
     notifyListeners();
   }
 
   Future<void> refreshProfile() async {
     final res = await api.get('/users/profile');
     currentUser = AppUser.fromJson(res['user']);
+    offlineSession = false;
+    await _persistUser(res['user']);
     notifyListeners();
   }
 }
+

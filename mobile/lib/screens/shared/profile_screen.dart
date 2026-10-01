@@ -153,6 +153,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ] else
             _StatRow(label: 'Completed Jobs', value: '${user.completedJobs}'),
           const SizedBox(height: 32),
+          // Administrators can point the app at another backend at runtime.
+          // Hidden for workers/job creators; also protected by AdminGate.
+          if (user.role == 'admin') ...[
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+              ),
+              // NOTE: a plain Material + InkWell keeps the ripple visible. A
+              // ListTile here trips Flutter's debug assertion because it paints
+              // its background on the nearest Material *above* this Container's
+              // DecoratedBox (see admin_settings_screen test failures).
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => context.push('/admin/server-settings'),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.settings_suggest_outlined, color: AppColors.primary),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Server & Admin Settings',
+                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                              SizedBox(height: 2),
+                              Text('Change the backend address, test the connection',
+                                  style: TextStyle(fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
           OutlinedButton(
             onPressed: () async {
               await auth.logout();

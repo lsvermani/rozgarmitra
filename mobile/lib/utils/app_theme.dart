@@ -77,13 +77,29 @@ class AppTheme {
 }
 
 class AppConstants {
-  /// Point this to your backend. Use 10.0.2.2 for the Android emulator
-  /// (maps to host machine's localhost), or your machine's LAN IP for a
-  /// physical device, or a deployed URL in production.
-  static const String apiBaseUrl = String.fromEnvironment(
+  /// Compile-time *fallback* backend address.
+  ///
+  /// The app no longer depends on this value at runtime: the effective API base
+  /// URL is resolved from [ConfigManager] (Server / Admin Settings) and only
+  /// falls back to this constant when no administrator configuration exists yet.
+  /// Keep it pointing somewhere sane (production builds should ship a real
+  /// `https://` URL through `scripts/build-release.ps1`).
+  static const String defaultApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://10.0.2.2:5000/api',
   );
 
+  /// Backwards-compatible alias. Prefer [defaultApiBaseUrl] or, better, the
+  /// runtime value from `ConfigManager.currentApiBaseUrl`.
+  static const String apiBaseUrl = defaultApiBaseUrl;
+
+  /// Version injected at build time by `scripts/build-release.ps1`; shown on the
+  /// Server / Admin Settings page so an administrator can confirm the build.
+  static const String appVersion = String.fromEnvironment(
+    'APP_VERSION',
+    defaultValue: 'dev',
+  );
+
   static const List<String> distanceOptions = ['2', '5', '10', '20'];
 }
+

@@ -15,3 +15,10 @@
 **/.flutter-plugins-dependencies
 **/.idea/
 **/.vscode/
+
+# Local run logs (scripts\dev-up.ps1 writes here)
+logs/
+# Signed release bundles copied out of the build folder
+release-artifacts/
+# Fallback MongoDB data dir used by scripts\start-mongodb.ps1
+.mongo-data/

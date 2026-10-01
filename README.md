@@ -11,8 +11,13 @@ A working MVP connecting daily-wage workers/job seekers with local job creators.
 |---|---|---|
 | **Backend API** | Node.js + Express + MongoDB (Mongoose) | ✅ Complete, verified to boot cleanly |
 | **Admin Dashboard** | React + Vite + react-router + recharts | ✅ Complete, verified to build cleanly |
-| **Mobile App** | Flutter (Provider + go_router) | ✅ Source written (core screens/flows), **not compiled/run** — no Flutter SDK in the build environment used to create this. Run it locally following the steps below. |
+| **Mobile App** | Flutter (Provider + go_router) | ✅ Builds + runs (verified on an Android 16 emulator) and on Chrome (Flutter web) |
+| **Android release** | Signed AAB/APK for Google Play | ✅ Upload key + release signing configured — see `docs/RUN_AND_RELEASE.md` |
+| **Tooling** | `scripts\*.ps1` | ✅ One-command dev stack, MongoDB connection script, Play Store build script |
 | **Demo data** | Seed script | ✅ 1 admin, 10 workers, 5 job creators, 20 jobs, ~30 applications, ratings, notifications |
+
+> 🚀 **Just want to run it?** `powershell -File scripts\dev-up.ps1 -WithFlutterWeb -WithAndroid`
+> then open http://localhost:5173 — full instructions in [`docs/RUN_AND_RELEASE.md`](docs/RUN_AND_RELEASE.md).
 
 ---
 
@@ -63,11 +68,24 @@ rozgarmitra/
 
 ## 3. Quick start
 
+> 📖 The complete, verified walkthrough (browser + app + MongoDB + Play Store) lives in
+> **[`docs/RUN_AND_RELEASE.md`](docs/RUN_AND_RELEASE.md)**. The short version:
+
 ### Prerequisites
 - Node.js 18+
 - MongoDB running locally (`mongodb://127.0.0.1:27017`) or a MongoDB Atlas connection string
 - Flutter SDK 3.3+ (for the mobile app) — https://docs.flutter.dev/get-started/install
 - Android Studio / an emulator or physical device (for the mobile app)
+
+### 3.0 One command for the whole stack (Windows)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\dev-up.ps1 -WithFlutterWeb -WithAndroid
+```
+
+Starts MongoDB (if needed), verifies the database + indexes, starts the API and the
+admin dashboard and opens it, then launches the app in Chrome and on the Android
+device/emulator. Stop it with `scripts\stop-all.ps1`.
 
 ### 3.1 Backend
 
@@ -75,12 +93,19 @@ rozgarmitra/
 cd backend
 cp .env.example .env      # edit if needed — defaults work for local dev
 npm install
-npm run seed               # populates demo data (10 workers, 5 creators, 20 jobs, etc.)
-npm run dev                 # starts on http://localhost:5000 (nodemon, auto-reload)
+npm run db:check          # NEW: verify MONGO_URI + list collections/doc counts
+npm run seed              # populates demo data (10 workers, 5 creators, 20 jobs, etc.)
+npm run dev               # starts on http://localhost:5000 (nodemon, auto-reload)
 # or: npm start
 ```
 
 Health check: `GET http://localhost:5000/api/health`
+
+`npm run db:check` is also the fastest way to test an Atlas connection string:
+
+```bash
+node scripts/mongo-connect.js --uri "mongodb+srv://user:pass@cluster0.xxxxx.mongodb.net/rozgarmitra"
+```
 
 The backend runs in **demo mode** by default (`APP_MODE=demo` in `.env`). In demo mode:
 - OTP is always `123456` (also returned in the `/api/auth/send-otp` response as `demoOtp` so the frontend can auto-fill it)

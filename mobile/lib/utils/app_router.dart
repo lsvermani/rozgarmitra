@@ -17,6 +17,7 @@ import '../screens/creator/post_job_screen.dart';
 import '../screens/creator/creator_applications_screen.dart';
 import '../screens/shared/profile_screen.dart';
 import '../screens/shared/notifications_screen.dart';
+import '../screens/admin/admin_settings_screen.dart';
 
 GoRouter buildRouter(AuthProvider auth) {
   return GoRouter(
@@ -25,7 +26,16 @@ GoRouter buildRouter(AuthProvider auth) {
     redirect: (context, state) {
       final loggedIn = auth.isLoggedIn;
       final loc = state.matchedLocation;
-      final isAuthFlow = loc == '/' || loc == '/entrywork' || loc == '/role-select' || loc.startsWith('/login') || loc == '/profile-setup';
+      // /admin/server-settings stays reachable WITHOUT a session on purpose: it
+      // is the recovery path when the saved server address is wrong, so the
+      // user cannot log in at all. The screen itself is protected by AdminGate
+      // (backend admin OTP or the device recovery passcode).
+      final isAuthFlow = loc == '/' ||
+          loc == '/entrywork' ||
+          loc == '/role-select' ||
+          loc.startsWith('/login') ||
+          loc == '/profile-setup' ||
+          loc == '/admin/server-settings';
 
       if (!loggedIn && !isAuthFlow) return '/entrywork';
       if (loggedIn && (loc == '/entrywork' || loc == '/role-select' || loc.startsWith('/login'))) {
@@ -74,6 +84,12 @@ GoRouter buildRouter(AuthProvider auth) {
       ),
 
       GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
+
+      // Administrator-only: change the backend server address at runtime.
+      GoRoute(
+        path: '/admin/server-settings',
+        builder: (context, state) => const AdminSettingsScreen(),
+      ),
     ],
   );
 }

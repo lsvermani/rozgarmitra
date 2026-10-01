@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import 'config/config_manager.dart';
 import 'providers/auth_provider.dart';
 import 'providers/job_provider.dart';
 import 'services/api_service.dart';
@@ -23,12 +24,22 @@ Future<void> main() async {
     debugPrintStack(stackTrace: stackTrace);
   }
 
+  // Administrator-managed server configuration (Server / Admin Settings).
+  // Loaded BEFORE the first request so the app talks to the saved backend from
+  // the very first call, and installed as the process-wide source of truth for
+  // code without a BuildContext. A storage problem must never block start-up.
+  final config = ConfigManager();
+  ConfigManager.install(config);
+  await config
+      .load()
+      .timeout(const Duration(seconds: 5), onTimeout: () {});
+
   // App-lifetime singletons, created exactly ONCE before runApp.
   // They must never be constructed inside build(): recreating the GoRouter on
   // a rebuild resets navigation to the initial route and disposes the login
   // screen while its OTP request is still in flight (the router already
   // re-runs redirects on auth changes via `refreshListenable`).
-  final api = ApiService();
+  final api = ApiService(config: config);
   final auth = AuthProvider(api)..restoreSession();
   final jobProvider = JobProvider(api);
   final router = buildRouter(auth);
@@ -37,6 +48,7 @@ Future<void> main() async {
     api: api,
     auth: auth,
     jobProvider: jobProvider,
+    config: config,
     router: router,
   ));
 }
@@ -45,6 +57,7 @@ class RozgarmitraApp extends StatelessWidget {
   final ApiService api;
   final AuthProvider auth;
   final JobProvider jobProvider;
+  final ConfigManager config;
   final GoRouter router;
 
   const RozgarmitraApp({
@@ -52,6 +65,7 @@ class RozgarmitraApp extends StatelessWidget {
     required this.api,
     required this.auth,
     required this.jobProvider,
+    required this.config,
     required this.router,
   });
 
@@ -62,9 +76,10 @@ class RozgarmitraApp extends StatelessWidget {
         Provider<ApiService>.value(value: api),
         ChangeNotifierProvider<AuthProvider>.value(value: auth),
         ChangeNotifierProvider<JobProvider>.value(value: jobProvider),
+        ChangeNotifierProvider<ConfigManager>.value(value: config),
       ],
       child: MaterialApp.router(
-        title: 'Rozgarmitra',
+        title: 'RozgarMitra',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
         routerConfig: router,
@@ -72,3 +87,4 @@ class RozgarmitraApp extends StatelessWidget {
     );
   }
 }
+
