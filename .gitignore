@@ -24,3 +24,8 @@ logs/
 release-artifacts/
 # Fallback MongoDB data dir used by scripts\start-mongodb.ps1
 .mongo-data/
+
+# Accidental duplicate of the repo folder. `npm install` in a directory with no
+# package.json creates an empty lockfile next to it, and that is how this folder
+# got committed in the first place. A real one would sit beside a package.json.
+rozgarmitra/

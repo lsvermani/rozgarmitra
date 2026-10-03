@@ -1,0 +1,31 @@
+{
+  "name": "rozgarmitra",
+  "private": true,
+  "version": "1.0.0",
+  "description": "RozgarMitra - Local Jobs & Daily-Wage Worker Platform. Convenience wrapper so npm commands work from the repository root.",
+  "//": "This file holds NO dependencies of its own. `admin` and `backend` are ordinary, independent npm projects; these scripts just delegate to them via --prefix. npm workspaces were deliberately avoided: they hoist into a root node_modules and would silently move every existing dependency, which is a large, disruptive change to make while working. `npm install` in a subfolder must keep working exactly as before.",
+  "scripts": {
+    "setup": "npm run install:all",
+    "install:all": "npm --prefix backend install && npm --prefix admin install",
+
+    "dev": "powershell -ExecutionPolicy Bypass -File scripts/dev-up.ps1",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:admin": "npm --prefix admin run dev",
+    "start": "npm --prefix backend start",
+
+    "build": "npm --prefix admin run build",
+    "lint": "npm --prefix admin run lint",
+
+    "db:setup": "npm --prefix backend run db:setup",
+    "db:check": "npm --prefix backend run db:check",
+    "seed": "npm --prefix backend run seed",
+
+    "test:auth": "npm --prefix backend run test:auth",
+    "test:admin-otp": "npm --prefix backend run test:admin-otp",
+    "test:security": "npm --prefix backend run test:security",
+    "test:whatsapp": "npm --prefix backend run test:whatsapp"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

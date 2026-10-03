@@ -80,12 +80,41 @@ rozgarmitra/
 ### 3.0 One command for the whole stack (Windows)
 
 ```powershell
+npm run dev
+# or, with the Flutter app on Chrome / a device:
 powershell -ExecutionPolicy Bypass -File scripts\dev-up.ps1 -WithFlutterWeb -WithAndroid
 ```
 
 Starts MongoDB (if needed), verifies the database + indexes, starts the API and the
 admin dashboard and opens it, then launches the app in Chrome and on the Android
 device/emulator. Stop it with `scripts\stop-all.ps1`.
+
+### 3.0a Running npm commands from the repository root
+
+`admin` and `backend` are ordinary, independent npm projects, each with its own
+`package.json`. The root `package.json` exists so you do not have to `cd` first —
+it has no dependencies of its own and simply delegates:
+
+```bash
+npm run setup            # npm install in both admin/ and backend/
+npm run dev:backend      # nodemon on :5000
+npm run dev:admin        # Vite on :5173
+npm run build            # vite build
+npm run lint
+npm run db:setup
+npm run test:admin-otp
+```
+
+Working **inside** `backend/` or `admin/` still works exactly as before:
+
+```bash
+cd backend && npm run db:check
+```
+
+> Running `npm install` in a folder that has no `package.json` creates an empty
+> lockfile next to it instead of erroring usefully. That is how a stray
+> duplicate `rozgarmitra/` folder got committed here; it is now git-ignored and
+> removed.
 
 ### 3.1 Backend
 
