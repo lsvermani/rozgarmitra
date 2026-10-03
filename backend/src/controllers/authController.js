@@ -1,8 +1,9 @@
-﻿const User = require('../models/User');
+const User = require('../models/User');
 const otpService = require('../services/otpService');
 const { deliveryMessage } = require('../services/otpDeliveryService');
 const { signToken } = require('../utils/token');
 const audit = require('../services/auditService');
+const otpAudit = require('../services/otpAuditService');
 const admin = require('firebase-admin');
 
 function getFirebaseAuth() {
@@ -119,9 +120,11 @@ async function verifyOtp(req, res, next) {
 
     const user = await User.findOne(role ? { mobile, role } : { mobile }).select('+otpCode +otpExpiresAt');
     if (!user) {
+      otpAudit.record({ req, phone: mobile, success: false, reason: 'user_not_found', channel: 'sms', purpose: 'login', role });
       return res.status(404).json({ success: false, message: 'User not found. Please send OTP first.' });
     }
     if (user.blocked) {
+      otpAudit.record({ req, user, phone: mobile, success: false, reason: 'blocked', channel: 'sms', purpose: 'login' });
       return res.status(403).json({ success: false, message: 'This account has been blocked.' });
     }
 
@@ -137,6 +140,7 @@ async function verifyOtp(req, res, next) {
         result: 'denied',
         message: 'Invalid or expired OTP.',
       });
+      otpAudit.record({ req, user, phone: mobile, success: false, reason: 'invalid_otp', channel: 'sms', purpose: 'login' });
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
     }
 
@@ -150,6 +154,7 @@ async function verifyOtp(req, res, next) {
 
     // Fire-and-forget so a slow audit write never delays the response.
     audit.recordSignIn(req, user, { liveLocation, method: 'OTP' });
+    otpAudit.record({ req, user, phone: mobile, success: true, channel: 'sms', purpose: 'login' });
 
     const token = signToken(user);
 

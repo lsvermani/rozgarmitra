@@ -21,6 +21,10 @@ const {
   activitySummary,
   liveLocations,
 } = require('../controllers/activityLogController');
+const {
+  listOtpVerifications,
+  otpSummary,
+} = require('../controllers/otpAuditController');
 
 const router = express.Router();
 
@@ -47,6 +51,13 @@ router.put('/reports/:id', updateReportStatus);
 router.get('/activity-logs', requirePermission('logs.view'), listActivityLogs);
 router.get('/activity-logs/summary', requirePermission('logs.view'), activitySummary);
 router.get('/activity-logs/live', requirePermission('logs.view'), liveLocations);
+
+// OTP Verification Log: who proved possession of a phone number, when, and
+// whether it succeeded - across workers, job creators and admins alike.
+// Read-only, so it shares the `logs.view` gate with Activity Logs. Declared
+// before any ':id' style route, for the same reason.
+router.get('/otp-verifications', requirePermission('logs.view'), listOtpVerifications);
+router.get('/otp-verifications/summary', requirePermission('logs.view'), otpSummary);
 
 // Audit trail for API address / environment changes made in the Android app's
 // Server / Admin Settings page. Recording only — these endpoints can never

@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
 import { LanguageProvider } from './context/LanguageContext';
@@ -11,6 +11,7 @@ import Jobs from './pages/Jobs';
 import Reports from './pages/Reports';
 import Applications from './pages/Applications';
 import ActivityLogs from './pages/ActivityLogs';
+import OtpVerifications from './pages/OtpVerifications';
 import WhatsAppSettings from './pages/WhatsAppSettings';
 import SmsGatewaySettings from './pages/SmsGatewaySettings';
 import Msg91Login from './pages/Msg91Login';
@@ -81,6 +82,7 @@ function AppRoutes() {
         <Route path="jobs" element={<Jobs />} />
         <Route path="applications" element={<Applications />} />
         <Route path="logs" element={<ActivityLogs />} />
+        <Route path="otp-verifications" element={<OtpVerifications />} />
         <Route path="whatsapp" element={<WhatsAppSettings />} />
         <Route path="sms-gateway" element={<SmsGatewaySettings />} />
         <Route path="reports" element={<Reports />} />

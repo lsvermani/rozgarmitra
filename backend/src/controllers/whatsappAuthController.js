@@ -1,4 +1,4 @@
-﻿/**
+/**
  * WhatsApp OTP authentication.
  *
  * Reuses the application's existing authentication rather than creating a
@@ -19,6 +19,7 @@ const otpService = require('../services/whatsappOtpService');
 const deliveryService = require('../services/otpDeliveryService');
 const delivery = require('../config/otpDelivery');
 const audit = require('../services/auditService');
+const otpAudit = require('../services/otpAuditService');
 const { signToken } = require('../utils/token');
 const { normalisePhone, toNationalNumber, maskPhone } = require('../utils/phone');
 
@@ -203,6 +204,7 @@ async function verifyOtp(req, res, next) {
 
     const otp = String(req.body.otp || '').trim();
     if (!/^\d{4,8}$/.test(otp)) {
+      otpAudit.record({ req, phone: e164, success: false, reason: 'malformed_otp', channel: 'whatsapp', purpose });
       return res.status(400).json({ success: false, message: 'Enter a valid OTP.' });
     }
 
@@ -217,17 +219,12 @@ async function verifyOtp(req, res, next) {
         result: 'denied',
         message: `Failed WhatsApp OTP attempt for ${maskPhone(e164)}.`,
       });
+      otpAudit.record({ req, phone: e164, success: false, reason: result.code, attemptsUsed: result.attemptsUsed, channel: 'whatsapp', purpose, role });
       return res.status(result.status).json({ success: false, message: result.reason });
     }
 
     const nationalNumber = national || toNationalNumber(e164);
-    if (!nationalNumber) {
-      return res.status(400).json({
-        success: false,
-        message: 'This number cannot be used for an account yet.',
-      });
-    }
-
+    
     const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
 
     // Same account resolution as `authController.verifyOtp`: one number may hold
@@ -244,6 +241,7 @@ async function verifyOtp(req, res, next) {
     }
 
     if (user.blocked) {
+        otpAudit.record({ req, user, phone: e164, success: false, reason: 'blocked', channel: 'whatsapp', purpose });
       return res.status(403).json({ success: false, message: 'This account has been blocked.' });
     }
 
@@ -260,6 +258,7 @@ async function verifyOtp(req, res, next) {
     // Coordinates still ride along so the audit trail keeps recording where the
     // sign-in happened; optional and not part of verification.
     audit.recordSignIn(req, user, { liveLocation: req.body.liveLocation, method: 'WhatsApp' });
+    otpAudit.record({ req, user, phone: e164, success: true, channel: 'whatsapp', purpose });
 
     res.json({
       success: true,

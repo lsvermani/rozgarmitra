@@ -100,6 +100,10 @@ export const adminApi = {
   // Activity Logs page. `filters` is passed straight through as query params.
   getActivityLogs: (params) => api.get('/admin/activity-logs', { params }),
   getActivitySummary: () => api.get('/admin/activity-logs/summary'),
+
+  /** OTP Verification Log - who verified, when, and whether it passed. */
+  getOtpVerifications: (params) => api.get('/admin/otp-verifications', { params }),
+  getOtpSummary: (params) => api.get('/admin/otp-verifications/summary', { params }),
   getLiveLocations: () => api.get('/admin/activity-logs/live'),
 };
 

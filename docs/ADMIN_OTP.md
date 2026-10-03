@@ -278,6 +278,44 @@ Server-side events, with the phone masked:
 The OTP, the gateway password, the pepper and the JWT are **never** logged. The
 browser never receives a stack trace, a gateway error body, or any credential.
 
+### The OTP Verification Log (in the panel)
+
+Console lines are not an audit trail — they scroll away and cannot be filtered.
+Every verification attempt across **all three roles** is also written to the
+`otpverifications` collection and shown in the Admin Panel under
+**OTP Verification Log** (`/admin/otp-verifications`).
+
+One row per *attempt*, not per code, so a wrong guess is as visible as a right
+one:
+
+| Column | Notes |
+| --- | --- |
+| When | The exact attempt time. |
+| Who / Role | Worker, job creator or admin. |
+| Phone | **Masked**, e.g. `+918699****2699`. |
+| Purpose / channel | Sign in or registration, plus the provider used. |
+| Result | Verified or Failed. |
+| Reason | `invalid_otp`, `otp_expired`, `unauthorized`, `blocked` … |
+| Attempts | Wrong guesses spent against that code. |
+| Device / IP | Coarse platform, plus the address. |
+
+Two deliberate limits on what is stored:
+
+- **The code is never stored**, in any form — not plaintext, not hashed. The
+  audit needs to know a code was *accepted*, never what it was, and keeping a
+  copy would defeat the reason the admin flow hashes it in the first place.
+  `otpAuditService.record()` has no parameter that could accept one.
+- **The phone is masked** before it is written. The full number stays on the
+  access-controlled `User` document, and `userId` links the two.
+
+Masking always normalises to E.164 first, so the same number arriving from the
+admin flow (E.164) and the worker flow (bare 10-digit) produces one identical
+string rather than two that look like different people.
+
+The writes are fire-and-forget: a slow or failed audit write can never delay or
+break the sign-in it describes. A successful login with no audit row is a
+monitoring gap, never a user-visible failure.
+
 ---
 
 ## 7. Testing

@@ -159,17 +159,25 @@ export default function Login() {
               maxLength={6}
               disabled={loading}
             />
-            {/* Clicking the boxes is what a person actually does, and the real input
-                is 1px wide - so without this handler focus lands on <body> and
-                every keystroke goes nowhere. Proven with a real keystroke test:
-                click-then-type entered nothing until the input was focused first.
-                focus() runs on click so it fires for mouse, pen and touch alike;
-                pointerdown would miss some assistive and synthetic input.
+            {/* The boxes ARE the label for the real input. That is the whole
+                fix: a <label htmlFor> forwards a click to its control natively,
+                so clicking anywhere in this row focuses the 1px input above with
+                no JavaScript and no dependence on event ordering. The input is
+                visually hidden, so this row is the only thing a person can aim
+                at - before this, the click fell through to <body> and every
+                keystroke was silently dropped.
+
+                The onClick is belt-and-braces for the same job; focus() is
+                idempotent, so running it twice costs nothing. onClick rather
+                than onPointerDown, because the former fires for mouse, pen and
+                touch alike and the latter does not fire for all assistive and
+                synthetic input.
+
                 The spans stay aria-hidden: they are decoration, and the input
                 above is the real control. */}
-            <div
+            <label
+              htmlFor="rm-admin-otp"
               className={`rm-otp-boxes${otpFocused ? ' rm-otp-boxes--focused' : ''}`}
-              role="presentation"
               onClick={() => otpInputRef.current?.focus()}
             >
               {Array.from({ length: 6 }).map((_, i) => (
@@ -181,7 +189,7 @@ export default function Login() {
                   {otp[i] || ''}
                 </span>
               ))}
-            </div>
+            </label>
             {notice && <div className="rm-ok" role="status">{notice}</div>}
             {error && <div className="rm-error" role="alert">{error}</div>}
             <button className="rm-btn rm-btn--primary" disabled={loading || otp.length !== 6}>

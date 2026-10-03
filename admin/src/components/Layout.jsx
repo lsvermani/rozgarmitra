@@ -1,4 +1,4 @@
-﻿import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { useLanguage } from '../context/useLanguage';
 import BrandMark from './BrandMark';
@@ -8,6 +8,7 @@ import LiveLocation from './LiveLocation';
 const links = [
   { to: '/admin/applications', label: 'Applications' },
   { to: '/admin/logs', label: 'ðŸ“œ Activity Logs' },
+  { to: '/admin/otp-verifications', label: 'OTP Verification Log' },
   { to: '/admin/whatsapp', label: 'ðŸ’¬ WhatsApp OTP' },
   { to: '/admin', label: 'ðŸ“Š Dashboard', end: true },
   { to: '/admin/users', label: 'ðŸ‘¥ Users' },
@@ -24,7 +25,7 @@ export default function Layout() {
     ? `Welcome, ${user?.name || 'Job Creator'}`
     : t('adminPanel');
   const visibleLinks = user?.role === 'job_creator' ? links.filter((link) => link.to === '/admin') : links;
-  const labels = { '/admin': t('dashboard'), '/admin/users': t('users'), '/admin/jobs': t('jobs'), '/admin/applications': 'Applications', '/admin/logs': 'Activity Logs', '/admin/whatsapp': 'WhatsApp OTP', '/admin/sms-gateway': 'SMS Gateway', '/admin/reports': t('reports'), '/admin/preview': t('preview') };
+  const labels = { '/admin': t('dashboard'), '/admin/users': t('users'), '/admin/jobs': t('jobs'), '/admin/applications': 'Applications', '/admin/logs': 'Activity Logs', '/admin/otp-verifications': 'OTP Verification Log', '/admin/whatsapp': 'WhatsApp OTP', '/admin/sms-gateway': 'SMS Gateway', '/admin/reports': t('reports'), '/admin/preview': t('preview') };
 
   const handleLogout = () => {
     const destination = user?.role === 'admin' ? '/login' : '/entrywork';
