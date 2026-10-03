@@ -142,7 +142,7 @@ async function verifyOtp(req, res, next) {
       });
       otpAudit.record({
         req, phone: parsed.e164, success: false, reason: 'unauthorized',
-        channel: 'sms', purpose: 'login',
+        channel: sms.provider(), purpose: 'login',
       });
       return res.status(403).json({ success: false, message: 'Unauthorized phone number.' });
     }
@@ -160,7 +160,7 @@ async function verifyOtp(req, res, next) {
       });
       otpAudit.record({
         req, phone: parsed.e164, success: false, reason: verdict.code,
-        attemptsUsed: verdict.attemptsUsed, channel: 'sms', purpose: 'login', role: 'admin',
+        attemptsUsed: verdict.attemptsUsed, channel: sms.provider(), purpose: 'login', role: 'admin',
       });
       return res.status(verdict.status).json({
         success: false,
@@ -176,7 +176,7 @@ async function verifyOtp(req, res, next) {
       logEvent('verify_failed', '- reason=no_admin_account');
       otpAudit.record({
         req, phone: parsed.e164, success: false, reason: 'no_admin_account',
-        channel: 'sms', purpose: 'login', role: 'admin',
+        channel: sms.provider(), purpose: 'login', role: 'admin',
       });
       return res.status(403).json({
         success: false,
@@ -187,7 +187,7 @@ async function verifyOtp(req, res, next) {
       logEvent('verify_failed', '- reason=account_blocked');
       otpAudit.record({
         req, user: admin, phone: parsed.e164, success: false, reason: 'blocked',
-        channel: 'sms', purpose: 'login', role: 'admin',
+        channel: sms.provider(), purpose: 'login', role: 'admin',
       });
       return res.status(403).json({ success: false, message: 'This account has been blocked.' });
     }
@@ -200,7 +200,7 @@ async function verifyOtp(req, res, next) {
     // The one row that says "an admin really did prove possession of a phone".
     otpAudit.record({
       req, user: admin, phone: parsed.e164, success: true,
-      channel: 'sms', purpose: 'login', role: admin.role || 'admin',
+      channel: sms.provider(), purpose: 'login', role: admin.role || 'admin',
     });
 
     res.json({

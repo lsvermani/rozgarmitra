@@ -48,10 +48,54 @@ async function readJson(res) {
 /**
  * Maps an HTTP status onto an internal code.
  *
- * The response body is deliberately not inspected: providers in this family
+ * The response **body is never logged or returned**: providers in this family
  * echo the request on a validation failure, which would put the OTP into a log
- * or an error message.
+ * or an error message. `classifyFailure` below reads a single machine code out
+ * of it and keeps nothing else - enough to tell "throttled" from "broken"
+ * without ever touching the payload.
  */
+/**
+ * Pulls the provider's own machine error code out of a failure body.
+ *
+ * Needed because StartMessaging answers HTTP **400** for at least three very
+ * different things. Observed live:
+ *
+ *     400 {"error":{"code":"RATE_LIMIT_EXCEEDED","message":"Too many OTP
+ *          requests for this mobile number. Please try again after 5 minutes."}}
+ *
+ * Classifying on the status alone called that `invalid_request` and the user was
+ * told the OTP service was broken, when in fact their own number was throttled
+ * and the correct advice is "wait five minutes". The status is the fallback; the
+ * body is the truth.
+ */
+function providerErrorCode(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  const candidates = [
+    payload.error && payload.error.code,
+    payload.error && payload.error.errorCode,
+    payload.code,
+    payload.errorCode,
+    payload.data && payload.data.error && payload.data.error.code,
+  ];
+  for (const value of candidates) {
+    if (value && String(value).trim()) return String(value).trim().toUpperCase();
+  }
+  return '';
+}
+
+/** Provider codes that mean "slow down", not "you are broken". */
+const THROTTLE_CODES = ['RATE_LIMIT_EXCEEDED', 'TOO_MANY_REQUESTS', 'QUOTA_EXCEEDED', 'RATE_LIMIT'];
+
+/**
+ * Maps a failed send onto one of this module's own error codes, preferring what
+ * the provider said over the HTTP status.
+ */
+function classifyFailure(status, payload) {
+  const code = providerErrorCode(payload);
+  if (THROTTLE_CODES.includes(code)) return 'rate_limited';
+  return classifyStatus(status);
+}
+
 function classifyStatus(status) {
   if (status === 400 || status === 422) return 'invalid_request';
   if (status === 401 || status === 403) return 'bad_credentials';
@@ -136,7 +180,7 @@ async function sendOtp(e164, otp) {
   const payload = await readJson(response);
 
   if (!response.ok) {
-    const errorCode = classifyStatus(response.status);
+      const errorCode = classifyFailure(response.status, payload);
     // Neither the key nor the response body is logged.
     console.warn(`[StartMessaging] send failed: status=${response.status} code=${errorCode}`);
     return { ok: false, errorCode, message: FRIENDLY_MESSAGES[errorCode] };

@@ -38,11 +38,17 @@ function deliveryMessage(errorCode) {
     // says exactly what an unreachable network says.
     case 'not_configured':
     case 'unauthorized':
+    case 'bad_credentials':
     case 'invalid_request':
     case 'provider_error':
-    case 'rate_limited':
     case 'timeout':
       return 'OTP service is temporarily unavailable. Please try again later.';
+    // Split out from the group above on purpose: the number itself is throttled,
+    // so "the service is unavailable" is wrong advice. Observed live as HTTP 400
+    // with RATE_LIMIT_EXCEEDED, which is why this is decided from the response
+    // body and not the status - see startmessagingService.classifyFailure.
+    case 'rate_limited':
+      return 'Too many codes requested for this number. Please wait a few minutes and try again.';
     case 'invalid_number':
       return 'This number cannot receive the code. Please check it and try again.';
 
