@@ -98,6 +98,67 @@ async function connect(wsUrl) {
   await cdp.send('Page.enable');
   await cdp.send('Runtime.enable');
 
+  // Widths that break flex layouts: a narrow phone, and one wide enough that the
+  // six boxes would overflow if `flex: 1 1 0` / `min-width: 0` were ever lost.
+  // A single-row bug that only appears at one width is still a bug.
+  const VIEWPORTS = [
+    { width: 320, height: 720, label: '320  small phone' },
+    { width: 375, height: 812, label: '375  modern phone' },
+    { width: 768, height: 900, label: '768  tablet' },
+    { width: 1280, height: 900, label: '1280 desktop' },
+  ];
+
+  console.log('\n=== 0. Six boxes must stay on one row at EVERY width ===');
+  for (const vp of VIEWPORTS) {
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: vp.width, height: vp.height, deviceScaleFactor: 1, mobile: false,
+    });
+    await cdp.send('Page.navigate', { url: PAGE_URL });
+    await sleep(1800);
+    // Render the OTP step directly, so the loop tests the boxes rather than
+    // re-driving the whole send-and-wait flow four times.
+    const geom = await cdp.evaluate(`(() => {
+      const box = document.querySelector('.rm-login-box');
+      if (!box) return { error: 'no login box' };
+      const old = box.querySelector('.rm-otp-boxes');
+      if (old) old.remove();
+      const lbl = document.createElement('label');
+      lbl.className = 'rm-otp-boxes';
+      lbl.setAttribute('for', 'rm-admin-otp');
+      for (let i = 0; i < 6; i += 1) {
+        const s = document.createElement('span');
+        s.className = 'rm-otp-box';
+        lbl.appendChild(s);
+      }
+      box.appendChild(lbl);
+      const cells = [...lbl.querySelectorAll('.rm-otp-box')].map((b) => {
+        const r = b.getBoundingClientRect();
+        return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width) };
+      });
+      const rows = new Set(cells.map((c) => c.y));
+      const cols = new Set(cells.map((c) => c.x));
+      return {
+        rows: rows.size, cols: cols.size, count: cells.length,
+        display: getComputedStyle(lbl).display,
+        narrowest: Math.min(...cells.map((c) => c.w)),
+        scrollW: document.documentElement.scrollWidth,
+        viewport: window.innerWidth,
+      };
+    })()`);
+    if (geom.error) {
+      check(`${vp.label}: boxes render`, false, geom.error);
+    } else {
+      check(`${vp.label}: one row, six columns`, geom.rows === 1 && geom.cols === 6,
+        `rows=${geom.rows} cols=${geom.cols} display=${geom.display}`);
+      check(`${vp.label}: boxes stay usable width`, geom.narrowest >= 24, `narrowest=${geom.narrowest}px`);
+      check(`${vp.label}: no horizontal overflow`, geom.scrollW <= geom.viewport,
+        `scrollW=${geom.scrollW} viewport=${geom.viewport}`);
+    }
+  }
+  await cdp.send('Emulation.clearDeviceMetricsOverride');
+  await cdp.send('Page.navigate', { url: PAGE_URL });
+  await sleep(1800);
+
   console.log('=== 1. Phone step (step 1) ===');
   await cdp.send('Page.navigate', { url: PAGE_URL });
   await sleep(2500);
@@ -136,12 +197,25 @@ async function connect(wsUrl) {
     const r = document.querySelector('.rm-login-box').getBoundingClientRect();
     const bx = boxes.getBoundingClientRect();
     const nr = document.querySelector('.rm-otp-native').getBoundingClientRect();
+    const cells = [...document.querySelectorAll('.rm-otp-box')].map((b) => {
+      const q = b.getBoundingClientRect();
+      return { x: Math.round(q.left), y: Math.round(q.top), w: Math.round(q.width), h: Math.round(q.height) };
+    });
+    const rows = new Set(cells.map((c) => c.y));
+    const cols = new Set(cells.map((c) => c.x));
     return {
       left: Math.round(r.left), right: Math.round(r.right), w: Math.round(r.width),
       center: Math.round(r.left + r.width / 2),
       boxesCenter: Math.round(bx.left + bx.width / 2),
       boxesW: Math.round(bx.width),
+      boxesDisplay: getComputedStyle(boxes).display,
+      boxesTag: boxes.tagName,
       nativeW: Math.round(nr.width),
+      cellCount: cells.length,
+      rowCount: rows.size,
+      colCount: cols.size,
+      firstCell: cells[0],
+      lastCell: cells[cells.length - 1],
       scrollW: document.documentElement.scrollWidth,
       viewport: window.innerWidth,
       notice: (document.querySelector('.rm-ok') || {}).textContent || '',
@@ -163,7 +237,27 @@ async function connect(wsUrl) {
     check('No horizontal overflow', step2.scrollW <= step2.viewport, `scrollW=${step2.scrollW} viewport=${step2.viewport}`);
     check('Hidden input is 1px, not full width', step2.nativeW === 1, `nativeW=${step2.nativeW}`);
     check('OTP boxes centred inside the card', Math.abs(step2.boxesCenter - step2.center) <= 2, `boxes ${step2.boxesCenter} vs card ${step2.center}`);
-    check('Six OTP boxes present', step2.boxesW > 0, `boxesW=${step2.boxesW}`);
+    check('Six OTP boxes present', step2.cellCount === 6, `count=${step2.cellCount}`);
+    // The regression this catches: `.rm-login-box label { display: block }`
+    // (0,1,1) beating `.rm-otp-boxes { display: flex }` (0,1,0), which stacked
+    // all six boxes vertically. Asserted on measured geometry, not on the class
+    // name, so any future cause of the same visual break also fails here.
+    check(
+      'All six OTP boxes sit on ONE row',
+      step2.rowCount === 1,
+      `rows=${step2.rowCount} display=${step2.boxesDisplay} tag=${step2.boxesTag}`,
+    );
+    check(
+      'All six OTP boxes sit in distinct columns',
+      step2.colCount === 6,
+      `cols=${step2.colCount} (duplicate x means boxes overlap)`,
+    );
+    check(
+      'Boxes increase left-to-right',
+      step2.firstCell && step2.lastCell && step2.lastCell.x > step2.firstCell.x,
+      `first.x=${step2.firstCell && step2.firstCell.x} last.x=${step2.lastCell && step2.lastCell.x}`,
+    );
+    check('Each OTP box is visibly sized', step2.firstCell && step2.firstCell.w > 20 && step2.firstCell.h > 20, `w=${step2.firstCell && step2.firstCell.w} h=${step2.firstCell && step2.firstCell.h}`);
     check('Success notice shown', /OTP sent successfully/i.test(step2.notice), step2.notice);
   }
 

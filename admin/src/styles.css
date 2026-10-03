@@ -309,6 +309,9 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Horizontal breathing room. Without it a 360px card on a 320px viewport
+     overflowed by 13px and the page gained a sideways scrollbar. */
+  padding: 0 16px;
   background: linear-gradient(135deg, var(--rm-primary-dark), var(--rm-primary));
   position: relative;
 }
@@ -330,8 +333,16 @@ button, input, select, textarea { font: inherit; }
   background: white;
   border-radius: 16px;
   padding: 40px;
-  width: 360px;
+  /* `min()` rather than a bare 360px: the card stays exactly 360px on desktop
+     but shrinks to whatever the viewport allows instead of overflowing. */
+  width: min(360px, 100%);
   box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+/* On a narrow phone the 40px side padding would leave too little for six boxes:
+   the row is `flex: 1 1 0`, so less content width means narrower boxes. Trimmed
+   to keep each box comfortably tappable rather than squeezing them to slivers. */
+@media (max-width: 420px) {
+  .rm-login-box { padding: 24px 20px; }
 }
 .rm-login-box h1 { text-align: center; color: var(--rm-primary); margin-bottom: 4px; font-size: 38px; letter-spacing: .5px; }
 .rm-login-box p.tagline { text-align: center; color: var(--rm-text-muted); margin-top: 0; margin-bottom: 24px; font-size: 13px; }
@@ -374,12 +385,25 @@ button, input, select, textarea { font: inherit; }
    boxes plus fixed gaps totalled 292px against a 280px content box, which only
    fit because flex silently shrank them - fragile, and it broke on narrow
    viewports. `flex: 1 1 0` shares the available space; max-width keeps the
-   desktop size. */
-.rm-otp-boxes {
+   desktop size.
+
+   The selector is `.rm-login-box label.rm-otp-boxes` (0,2,1) rather than a bare
+   `.rm-otp-boxes` (0,1,0), because the container IS a <label> (that is what
+   makes a click on the boxes focus the hidden input). The page-wide
+   `.rm-login-box label` rule (0,1,1) sets `display: block`, and at the lower
+   specificity that rule won - so the flex row collapsed and each box, itself
+   `display: flex`, became a block on its own row: six boxes stacked
+   vertically instead of one row of six. Same trap as `input.rm-otp-native`
+   above, and fixed the same way. */
+.rm-login-box label.rm-otp-boxes {
   display: flex;
   gap: 8px;
   justify-content: center;
+  align-items: stretch;
   width: 100%;
+  /* The generic label rule sets `font-weight: 600` and a bottom margin for the
+     caption; the boxes render their own digits, so neither applies here. */
+  font-weight: 400;
   margin-bottom: 16px;
 }
 .rm-otp-box {
