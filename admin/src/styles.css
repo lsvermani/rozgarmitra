@@ -347,29 +347,45 @@ button, input, select, textarea { font: inherit; }
 
 /* --- Admin OTP entry ------------------------------------------------------
    The six boxes are a rendering of ONE real input (.rm-otp-native), which is
-   kept in the accessibility tree and focusable. Hiding it with
-   `display:none` would break paste, autofill and the numeric keypad, so it is
-   moved off-screen instead and made transparent. */
-.rm-otp-native {
+   kept in the accessibility tree and focusable. Hiding it with `display:none`
+   would break paste, autofill and the numeric keypad, so it is moved
+   off-screen instead and made transparent.
+
+   The selector is `input.rm-otp-native` (specificity 0,2,1) rather than a bare
+   `.rm-otp-native` (0,1,0) on purpose. The page-wide `.rm-login-box input`
+   rule (0,1,1) sets `width: 100%`; at the lower specificity that rule won, so
+   the off-screen input became a full-viewport-wide absolutely-positioned box.
+   That added ~466px of horizontal overflow to the centred login page, which is
+   what visually dragged the whole card to the left on the OTP step only. */
+.rm-login-box input.rm-otp-native {
   position: absolute;
-  width: 1px;
+  width: 1px !important;
   height: 1px;
-  padding: 0;
-  margin: -1px;
+  padding: 0 !important;
+  margin: -1px !important;
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
-  border: 0;
+  border: 0 !important;
   opacity: 0;
 }
+
+/* Fluid so the six boxes always fit the card, at any card width. Fixed 42px
+   boxes plus fixed gaps totalled 292px against a 280px content box, which only
+   fit because flex silently shrank them - fragile, and it broke on narrow
+   viewports. `flex: 1 1 0` shares the available space; max-width keeps the
+   desktop size. */
 .rm-otp-boxes {
   display: flex;
   gap: 8px;
   justify-content: center;
+  width: 100%;
   margin-bottom: 16px;
 }
 .rm-otp-box {
-  width: 42px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 42px;
   height: 50px;
   display: flex;
   align-items: center;

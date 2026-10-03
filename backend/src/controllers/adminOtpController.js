@@ -14,7 +14,7 @@
  * `services/smsGatewayAdminService.js`.
  */
 const otp = require('../services/adminOtpService');
-const sms = require('../services/smsGatewayAdminService');
+const sms = require('../services/adminSmsService');
 const session = require('../services/adminOtpSessionService');
 const config = require('../config/adminOtp');
 const audit = require('../services/auditService');
