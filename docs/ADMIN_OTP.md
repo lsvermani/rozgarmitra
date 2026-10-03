@@ -4,20 +4,33 @@ Signs the administrator in with a one-time code sent as a real SMS, using an
 Android phone and its SIM as the sender.
 
 ```
-Browser /login
+Admin browser
      │  phone number
      ▼
 Backend ── generate 6-digit OTP (crypto.randomInt), store HMAC only
      │
      ▼
-Android SMS Gateway  (capcom6/android-sms-gateway, runs on the handset)
-     │
+Android SMS Gateway  (capcom6/android-sms-gateway, HTTP server on the handset)
+     │  POST http://<phone-lan-ip>:8080/messages   (HTTP Basic)
      ▼
 SIM ──SMS──► 8699142699
 ```
 
 Nothing is sent from the browser. The gateway credentials live only in the
 server's environment.
+
+> **Which URL to use.** The app exposes two different APIs and they do *not*
+> share a path prefix. Verified against the project's own `WebService.kt` and its
+> bundled `swagger.json`:
+>
+> | Mode | Base URL | Send path |
+> |---|---|---|
+> | **Local** (default, recommended) | `http://<phone-lan-ip>:8080` | `/messages` |
+> | Cloud relay | `https://api.sms-gate.app/3rdparty/v1` | `/messages` |
+>
+> The `/3rdparty/v1` prefix belongs to the **cloud host only** — a handset never
+> serves it. This project uses local mode, so `SMS_GATEWAY_URL` is the bare
+> `http://<phone-ip>:8080` and the backend appends only `/messages`.
 
 ---
 

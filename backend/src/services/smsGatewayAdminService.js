@@ -12,10 +12,21 @@
  *     carries the username it rejected, which is an authentication detail the
  *     browser must not see.
  *
- * Endpoints come from the project's own published API (docs.sms-gate.app):
- *   POST {baseUrl}/3rdparty/v1/messages
- *        { "textMessage": { "text": "..." }, "phoneNumbers": ["+91..."] }
- * authenticated with HTTP Basic, which the app still supports.
+ * Endpoints come from the project's own source (`WebService.kt` + the bundled
+ * `swagger.json`), which distinguishes two deployment modes that do NOT share a
+ * path prefix:
+ *
+ *   LOCAL (the handset's HTTP server, what this project uses - the default)
+ *     POST {SMS_GATEWAY_URL}/messages
+ *   CLOUD (api.sms-gate.app relay)
+ *     POST https://api.sms-gate.app/3rdparty/v1/messages
+ *
+ * This service only ever appends the leaf path, so `SMS_GATEWAY_URL` must carry
+ * any prefix the chosen host needs.
+ *
+ * Body: { "textMessage": { "text": "..." }, "phoneNumbers": ["..."] }
+ * Auth: HTTP Basic. `ScopeAuthorization.kt` grants a Basic-authenticated request
+ * every scope, so no token exchange is needed.
  */
 const capcom6 = require('./capcom6Service');
 const capcom6Config = require('../config/capcom6');

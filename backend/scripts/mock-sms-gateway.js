@@ -4,11 +4,15 @@
  *   node scripts/mock-sms-gateway.js
  *
  * Implements exactly the endpoint this backend calls, taken from the project's
- * published API (docs.sms-gate.app):
+ * own source rather than its prose docs (`WebService.kt` mounts every route at
+ * the ROOT in local mode):
  *
- *   POST /3rdparty/v1/messages
- *        { "textMessage": { "text": "..." }, "phoneNumbers": ["+91..."] }
+ *   POST /messages
+ *        { "textMessage": { "text": "..." }, "phoneNumbers": ["..."] }
  *   authenticated with HTTP Basic.
+ *
+ * The cloud-style `/3rdparty/v1/messages` path is also accepted, because that
+ * prefix belongs to the api.sms-gate.app relay and never appears on a handset.
  *
  * It exists so the admin OTP flow can be proven end to end - generation, hashing,
  * delivery, verification, rate limiting - on a machine with no Android handset.
@@ -44,7 +48,12 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (req.method !== 'POST' || !req.url.startsWith('/3rdparty/v1/messages')) {
+  // Local mode mounts the send route at the root; the cloud relay prefixes it.
+  const isSend =
+    req.method === 'POST' &&
+    (req.url === '/messages' || req.url === '/3rdparty/v1/messages');
+
+  if (!isSend) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not found' }));
     return;
@@ -79,7 +88,7 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`Mock SMS Gateway listening on http://127.0.0.1:${PORT}`);
   console.log(`Username: ${USERNAME}`);
   console.log(`Password: ${PASSWORD}`);
-  console.log('Send endpoint: POST /3rdparty/v1/messages (HTTP Basic)');
+  console.log('Send endpoint: POST /messages (HTTP Basic)');
 });
 
 module.exports = server;

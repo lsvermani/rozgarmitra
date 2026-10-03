@@ -1,13 +1,33 @@
 /**
  * capcom6/android-sms-gateway client.
  *
- * Endpoints are taken from the project's published API (docs.sms-gate.app):
+ * Paths verified against the project's own source (see `WebService.kt` and
+ * `app/src/main/assets/api/swagger.json`), because the two deployment modes do
+ * NOT share a path prefix:
  *
- *   send      POST {base}/3rdparty/v1/messages
- *             { "textMessage": { "text": "..." }, "phoneNumbers": ["+91..."] }
- *   register  POST {base}/webhooks   { "id", "url", "event" }
+ *   LOCAL  (the app's HTTP server on the handset - what this project uses)
+ *          POST http://<phone-ip>:8080/messages
+ *          POST http://<phone-ip>:8080/webhooks
+ *          Routes are mounted at the ROOT. Default port 8080
+ *          (`LocalServerSettings.port`).
  *
- * Auth is HTTP Basic, which the app still supports.
+ *   CLOUD  (api.sms-gate.app relay)
+ *          POST https://api.sms-gate.app/3rdparty/v1/messages
+ *          The `/3rdparty/v1` prefix belongs to the CLOUD host only.
+ *
+ * So the prefix is NOT baked in here: the operator configures the complete base
+ * URL (`SMS_GATEWAY_URL`) and this module always appends only the leaf path.
+ * Hardcoding `/3rdparty/v1` - as an earlier version of this file did - produced
+ * a guaranteed 404 against a local handset, because that route does not exist
+ * there.
+ *
+ * Request body (`PostMessageRequest`):
+ *   { "textMessage": { "text": "..." }, "phoneNumbers": ["..."], "simNumber": 1 }
+ * `deviceId` is added only when configured, for multi-device cloud accounts.
+ *
+ * Auth is HTTP Basic. `ScopeAuthorization.kt` returns true immediately for a
+ * `UserIdPrincipal` (what Basic auth produces), so a Basic-authenticated
+ * request is granted every scope - no scope juggling is needed.
  *
  * The password is only ever read here and sent as an Authorization header; it is
  * never logged and never returned.
@@ -15,7 +35,8 @@
 const crypto = require('crypto');
 const config = require('../config/capcom6');
 
-const SEND_PATH = '/3rdparty/v1/messages';
+/** Leaf paths, appended to the configured base URL. */
+const SEND_PATH = '/messages';
 const WEBHOOK_PATH = '/webhooks';
 
 /** Basic auth header for the app. */
