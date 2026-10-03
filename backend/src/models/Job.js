@@ -31,19 +31,39 @@ const jobSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
+        // --- existing values: the website and the Flutter app compare these
+        // --- exact strings, so they are kept as-is (see config/permissions.js
+        // --- JOB_STATUS_MAP for the Draft/Pending/Assigned aliases).
         'OPEN',
         'OFFERS_RECEIVED',
         'WORKERS_SELECTED',
         'IN_PROGRESS',
         'COMPLETED',
         'CANCELLED',
-        'POSTED',
-        'APPLICATIONS_RECEIVED',
-        'WORKER_SELECTED',
+        'POSTED', // <- Draft
+        'APPLICATIONS_RECEIVED', // <- Pending
+        'WORKER_SELECTED', // <- Assigned
         'RATED',
+        // --- genuinely new, added for the admin Job Management module.
+        'UNDER_REVIEW',
+        'REJECTED',
       ],
       default: 'OPEN',
     },
+
+    // --- Admin Job Management additions (§7). All optional with defaults, so
+    // --- the 21 existing job documents are untouched by this change. ---
+
+    // 'low' | 'normal' | 'high' | 'urgent'
+    priority: { type: String, enum: ['low', 'normal', 'high', 'urgent'], default: 'normal' },
+    // Optional completion deadline, distinct from `date` (the work day).
+    deadline: { type: Date, default: null },
+    // Free-text instructions shown to the assigned worker.
+    instructions: { type: String, default: '', maxlength: 4000 },
+    // 0-100, maintained by the admin and reflected on the dashboard.
+    progress: { type: Number, default: 0, min: 0, max: 100 },
+    // Set when status becomes REJECTED.
+    rejectionReason: { type: String, default: '', maxlength: 500 },
 
     offersCount: { type: Number, default: 0 },
     applicationsCount: { type: Number, default: 0 },
@@ -55,5 +75,9 @@ const jobSchema = new mongoose.Schema(
 jobSchema.index({ category: 1, status: 1 });
 jobSchema.index({ 'location.latitude': 1, 'location.longitude': 1 });
 jobSchema.index({ date: 1 });
+// Added for the admin listings, which filter and sort on these.
+jobSchema.index({ status: 1, createdAt: -1 });
+jobSchema.index({ priority: 1, deadline: 1 });
+jobSchema.index({ creatorId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Job', jobSchema);

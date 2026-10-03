@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+﻿import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/useAuth';
 import { useLanguage } from '../context/useLanguage';
 import BrandMark from './BrandMark';
@@ -7,11 +7,13 @@ import LiveLocation from './LiveLocation';
 
 const links = [
   { to: '/admin/applications', label: 'Applications' },
-  { to: '/admin', label: '📊 Dashboard', end: true },
-  { to: '/admin/users', label: '👥 Users' },
-  { to: '/admin/jobs', label: '📋 Jobs' },
-  { to: '/admin/reports', label: '🚩 Reports' },
-  { to: '/admin/preview', label: '🎭 Task Preview' },
+  { to: '/admin/logs', label: 'ðŸ“œ Activity Logs' },
+  { to: '/admin/whatsapp', label: 'ðŸ’¬ WhatsApp OTP' },
+  { to: '/admin', label: 'ðŸ“Š Dashboard', end: true },
+  { to: '/admin/users', label: 'ðŸ‘¥ Users' },
+  { to: '/admin/jobs', label: 'ðŸ“‹ Jobs' },
+  { to: '/admin/reports', label: 'ðŸš© Reports' },
+  { to: '/admin/preview', label: 'ðŸŽ­ Task Preview' },
 ];
 
 export default function Layout() {
@@ -22,7 +24,7 @@ export default function Layout() {
     ? `Welcome, ${user?.name || 'Job Creator'}`
     : t('adminPanel');
   const visibleLinks = user?.role === 'job_creator' ? links.filter((link) => link.to === '/admin') : links;
-  const labels = { '/admin': t('dashboard'), '/admin/users': t('users'), '/admin/jobs': t('jobs'), '/admin/applications': 'Applications', '/admin/reports': t('reports'), '/admin/preview': t('preview') };
+  const labels = { '/admin': t('dashboard'), '/admin/users': t('users'), '/admin/jobs': t('jobs'), '/admin/applications': 'Applications', '/admin/logs': 'Activity Logs', '/admin/whatsapp': 'WhatsApp OTP', '/admin/sms-gateway': 'SMS Gateway', '/admin/reports': t('reports'), '/admin/preview': t('preview') };
 
   const handleLogout = () => {
     const destination = user?.role === 'admin' ? '/login' : '/entrywork';
@@ -56,7 +58,7 @@ export default function Layout() {
           <h1 />
           <div className="rm-topbar__user">
             <LiveLocation className="rm-location--admin" />
-            <span>👤 {user?.name || 'Admin'} ({user?.mobile})</span>
+            <span>ðŸ‘¤ {user?.name || 'Admin'} ({user?.mobile})</span>
             <button className="rm-btn rm-btn--outline" onClick={handleLogout}>{t('logout')}</button>
           </div>
         </div>
@@ -65,3 +67,4 @@ export default function Layout() {
     </div>
   );
 }
+

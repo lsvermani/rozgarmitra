@@ -27,16 +27,29 @@ button, input, select, textarea { font: inherit; }
 .rm-public-app { min-height: 100vh; background: #f4f8f7; color: #123b36; padding-bottom: 76px; }
 .rm-public-header { position: sticky; top: 0; z-index: 15; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px clamp(18px, 5vw, 72px); background: rgba(255,255,255,.94); border-bottom: 1px solid #dce8e1; backdrop-filter: blur(14px); }
 .rm-public-logo { color: #123b36; text-decoration: none; font-size: 23px; font-weight: 950; letter-spacing: .5px; }
-.rm-public-logo span, .rm-public-footer strong span { color: #e89a12; }
+/* Only the trailing "MITRA" half takes the accent colour. A blanket
+   `.rm-public-logo span` rule also matched the `.rm-public-logo__mark`
+   wrapper, so the bare "ROZGAR" text inherited amber instead of the dark
+   green set on `.rm-public-logo`. `:not(.rm-brand-mark)` keeps the logo icon
+   wrapper out of it too. */
+.rm-public-logo__mark > span:not(.rm-brand-mark), .rm-public-footer strong span { color: #e89a12; }
 .rm-public-logo small { display: block; color: #75918a; font-size: 10px; font-weight: 700; letter-spacing: 0; }
 /* Small RM logo mark beside the wordmark (header, sidebar, footers, login). */
 .rm-public-logo__mark { display: inline-flex; align-items: center; gap: 8px; }
 .rm-public-footer__brand { display: inline-flex; align-items: center; gap: 8px; }
 .rm-sidebar__logo { display: inline-flex; align-items: center; gap: 8px; }
 .rm-login-title { display: flex; align-items: center; justify-content: center; gap: 10px; }
+/* "Mitra" takes the brand accent, matching the wordmark used in the site header,
+   the admin sidebar and the RM login logo. The flex `gap` above already spaces
+   the two halves apart, so no literal space is needed in the text. */
+.rm-login-title__accent { color: var(--rm-accent); }
 .rm-login-rm-logo { display: flex; align-items: center; gap: 8px; }
 .rm-brand-mark__img { border-radius: 6px; }
 .rm-public-header__tools { display: flex; align-items: flex-start; gap: 10px; }
+/* Header call-to-action: "Sign up / Login" -> /entrywork. Sits to the left of the
+   language widget, which stacks the tabs above the live-location pill. */
+.rm-public-authlink { display: inline-flex; align-items: center; gap: 7px; padding: 9px 15px; border-radius: 10px; background: var(--rm-primary); color: #fff; font-size: 12px; font-weight: 800; white-space: nowrap; text-decoration: none; box-shadow: 0 5px 16px rgba(15,118,110,.22); transition: background .15s ease, transform .15s ease; }
+.rm-public-authlink:hover, .rm-public-authlink:focus-visible { background: #0b5f59; color: #fff; transform: translateY(-1px); }
 /* Language tabs stacked on top, live location directly underneath. */
 .rm-lang-widget { display: grid; justify-items: end; gap: 7px; min-width: 0; }
 .rm-public-header .rm-language-tabs { position: static; max-width: 340px; box-shadow: none; background: #f0f6f3; }
@@ -70,9 +83,28 @@ button, input, select, textarea { font: inherit; }
 .rm-category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }.rm-category-card { min-height: 112px; display: grid; place-items: center; align-content: center; gap: 9px; border: 1px solid #d7e7df; border-radius: 13px; background: white; color: #214f47; cursor: pointer; }.rm-category-card span { font-size: 29px; }.rm-category-card strong { font-size: 12px; }.rm-category-card:hover, .rm-category-card.selected { border-color: #0f766e; background: #e0f4ed; }
 .rm-public-job-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }.rm-public-job-card { display: flex; flex-direction: column; min-height: 286px; padding: 19px; border: 1px solid #d7e7df; border-radius: 13px; background: white; }.rm-public-job-card__top { display: flex; justify-content: space-between; gap: 8px; color: #789089; font-size: 11px; }.rm-public-job-card h3 { margin: 19px 0 8px; font-family: Georgia, serif; font-size: 22px; line-height: 1.1; }.rm-public-job-card p { margin: 0 0 18px; color: #6b817b; font-size: 12px; line-height: 1.5; }.rm-public-job-card__meta { display: grid; gap: 7px; margin: auto 0 16px; padding: 13px 0; border-top: 1px solid #e4eee9; border-bottom: 1px solid #e4eee9; color: #56726a; font-size: 11px; }.rm-public-job-card__meta strong { color: #0f766e; font-size: 15px; }.rm-public-pill { display: inline-block; align-self: flex-start; padding: 5px 9px; border-radius: 20px; background: #e3f2ed; color: #0f766e; font-size: 10px; font-weight: 850; }.rm-public-empty { padding: 32px; border: 1px dashed #a9c8bc; border-radius: 13px; text-align: center; color: #647b76; background: rgba(255,255,255,.55); }
 .rm-public-page { max-width: 1080px; min-height: 600px; }.rm-public-back { display: inline-block; margin-bottom: 22px; color: #0f766e; font-size: 13px; font-weight: 800; text-decoration: none; }.rm-job-detail-card { max-width: 670px; margin-top: 28px; padding: 24px; border-radius: 15px; background: white; border: 1px solid #d7e7df; }.rm-job-detail-card > div { display: flex; flex-wrap: wrap; gap: 12px; color: #5d786f; font-size: 13px; }.rm-job-detail-card > strong { display: block; margin: 24px 0 12px; color: #0f766e; font-size: 25px; }.rm-job-detail-card p { color: #687f78; line-height: 1.55; }.rm-public-form { display: grid; gap: 15px; max-width: 620px; padding: 25px; background: white; border: 1px solid #d7e7df; border-radius: 15px; }.rm-public-form label { display: grid; gap: 6px; color: #43645b; font-size: 12px; font-weight: 800; }.rm-public-form input, .rm-public-form select, .rm-public-form textarea { width: 100%; padding: 11px; border: 1px solid #d5e5dd; border-radius: 8px; background: #fbfefd; }.rm-public-form textarea { min-height: 78px; resize: vertical; }.rm-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }.rm-public-form small { color: #80978f; }.rm-public-success { max-width: 620px; padding: 22px; border-radius: 12px; background: #dcf5e9; color: #236b52; }.rm-info-list { max-width: 750px; }.rm-info-list section { padding: 15px 0; border-bottom: 1px solid #dce8e1; }.rm-info-list h3 { margin: 0 0 5px; font-size: 17px; }.rm-info-list p { margin: 0; color: #647b76; line-height: 1.55; }.rm-contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; max-width: 850px; }.rm-contact-grid > div { padding: 25px; border-radius: 15px; background: white; border: 1px solid #d7e7df; }.rm-contact-grid h2 { margin-top: 0; font-family: Georgia, serif; }.rm-contact-grid p { color: #647b76; line-height: 1.55; }.rm-contact-details p { color: #315b51; font-weight: 700; }
-.rm-public-footer { display: grid; grid-template-columns: 1fr 2fr auto; gap: 30px; align-items: start; padding: 38px max(20px, calc((100vw - 1090px) / 2)); background: #123b36; color: white; }.rm-public-footer strong { font-size: 21px; }.rm-public-footer p { margin: 8px 0; color: #a9c8bc; font-size: 12px; }.rm-public-footer__links { display: flex; flex-wrap: wrap; gap: 12px 19px; }.rm-public-footer__links a { color: #d2e5df; font-size: 12px; text-decoration: none; }.rm-public-footer small { color: #a9c8bc; font-size: 11px; }.rm-public-bottom-nav { display: none; }
-@media (max-width: 850px) { .rm-public-header { align-items: flex-start; }.rm-public-header__tools { display: grid; justify-items: end; gap: 7px; }.rm-public-header .rm-language-tabs { max-width: 240px; }.rm-lang-widget { max-width: 240px; }.rm-location { max-width: 100%; }.rm-public-hero { grid-template-columns: 1fr; min-height: 0; padding-top: 52px; }.rm-hero-note { display: none; }.rm-category-grid { grid-template-columns: repeat(2, 1fr); }.rm-public-job-grid { grid-template-columns: repeat(2, 1fr); }.rm-public-footer { grid-template-columns: 1fr; padding-bottom: 100px; }.rm-public-bottom-nav { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(3, 1fr); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1px solid #dce8e1; box-shadow: 0 -5px 18px rgba(18,59,54,.08); }.rm-public-bottom-nav button, .rm-public-bottom-nav a { display: grid; justify-items: center; gap: 3px; border: 0; background: transparent; color: #42675e; font-size: 18px; text-decoration: none; cursor: pointer; }.rm-public-bottom-nav span { font-size: 10px; font-weight: 800; }.rm-public-header .rm-language-tabs button { padding: 5px 6px; font-size: 10px; } }
-@media (max-width: 520px) { .rm-public-header { padding: 12px 14px; }.rm-public-logo { font-size: 19px; }.rm-location { max-width: 100%; }.rm-lang-widget { max-width: 100%; }.rm-public-hero { padding: 38px 18px; }.rm-public-hero h1, .rm-public-page h1 { font-size: 42px; }.rm-public-hero p, .rm-public-lead { font-size: 15px; }.rm-public-hero__actions { display: grid; }.rm-public-btn { width: 100%; }.rm-public-section { padding: 43px 18px; }.rm-public-job-grid { grid-template-columns: 1fr; }.rm-form-row, .rm-contact-grid { grid-template-columns: 1fr; }.rm-public-header__tools { max-width: 58%; }.rm-public-header .rm-language-tabs { max-width: 195px; } }
+.rm-public-footer { display: grid; grid-template-columns: 1fr 2fr auto; gap: 30px; align-items: start; padding: 38px max(20px, calc((100vw - 1090px) / 2)); background: #123b36; color: white; }.rm-public-footer strong { font-size: 21px; }.rm-public-footer p { margin: 8px 0; color: #a9c8bc; font-size: 12px; }.rm-public-footer__links { display: flex; flex-wrap: wrap; gap: 12px 19px; }.rm-public-footer__links a { color: #d2e5df; font-size: 12px; text-decoration: none; }
+/* Admin is a different audience from the public links, so mark it visually. */
+.rm-public-footer__links a:hover { color: white; text-decoration: underline; }
+.rm-public-footer__admin { padding: 4px 10px; border: 1px solid rgba(210,229,223,.45); border-radius: 7px; font-weight: 800; }
+.rm-public-footer__admin:hover { border-color: #d2e5df; }.rm-public-footer small { color: #a9c8bc; font-size: 11px; }.rm-public-bottom-nav { display: none; }
+@media (max-width: 850px) { .rm-public-header { align-items: flex-start; }.rm-public-header__tools { display: grid; justify-items: end; gap: 7px; }.rm-public-header .rm-language-tabs { max-width: 240px; }.rm-lang-widget { max-width: 240px; }.rm-public-authlink { order: -1; }.rm-location { max-width: 100%; }.rm-public-hero { grid-template-columns: 1fr; min-height: 0; padding-top: 52px; }.rm-hero-note { display: none; }.rm-category-grid { grid-template-columns: repeat(2, 1fr); }.rm-public-job-grid { grid-template-columns: repeat(2, 1fr); }.rm-public-footer { grid-template-columns: 1fr; padding-bottom: 100px; }.rm-public-bottom-nav { position: fixed; z-index: 20; right: 0; bottom: 0; left: 0; display: grid; grid-template-columns: repeat(3, 1fr); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.96); border-top: 1px solid #dce8e1; box-shadow: 0 -5px 18px rgba(18,59,54,.08); }.rm-public-bottom-nav button, .rm-public-bottom-nav a { display: grid; justify-items: center; gap: 3px; border: 0; background: transparent; color: #42675e; font-size: 18px; text-decoration: none; cursor: pointer; }.rm-public-bottom-nav span { font-size: 10px; font-weight: 800; }.rm-public-header .rm-language-tabs button { padding: 5px 6px; font-size: 10px; } }
+@media (max-width: 520px) { .rm-public-header { padding: 12px 14px; }.rm-public-logo { font-size: 19px; }.rm-public-authlink { padding: 7px 10px; font-size: 11px; }.rm-location { max-width: 100%; }.rm-lang-widget { max-width: 100%; }.rm-public-hero { padding: 38px 18px; }.rm-public-hero h1, .rm-public-page h1 { font-size: 42px; }.rm-public-hero p, .rm-public-lead { font-size: 15px; }.rm-public-hero__actions { display: grid; }.rm-public-btn { width: 100%; }.rm-public-section { padding: 43px 18px; }.rm-public-job-grid { grid-template-columns: 1fr; }.rm-form-row, .rm-contact-grid { grid-template-columns: 1fr; }.rm-public-header__tools { max-width: 58%; }.rm-public-header .rm-language-tabs { max-width: 195px; } }
+
+/* Edit-user modal (admin > Users) */
+.rm-modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; background: rgba(9,32,29,.55); backdrop-filter: blur(2px); }
+.rm-modal { width: 100%; max-width: 430px; padding: 26px; border-radius: 14px; background: white; box-shadow: 0 24px 60px rgba(0,0,0,.28); }
+.rm-modal__title { margin: 0 0 4px; color: var(--rm-primary-dark); font-size: 20px; }
+.rm-modal__subtitle { margin: 0 0 18px; color: var(--rm-text-muted); font-size: 12px; }
+.rm-modal__field { display: grid; gap: 5px; margin-bottom: 14px; }
+.rm-modal__field > span { color: #43645b; font-size: 12px; font-weight: 800; }
+.rm-modal__field input, .rm-modal__field select { width: 100%; padding: 10px 12px; border: 1px solid var(--rm-border); border-radius: 8px; font-size: 14px; background: #fff; }
+.rm-modal__field input:focus, .rm-modal__field select:focus { outline: 2px solid var(--rm-primary-light); border-color: var(--rm-primary); }
+.rm-modal__field input:disabled, .rm-modal__field select:disabled { background: #f1f5f3; color: #93a8a1; cursor: not-allowed; }
+.rm-modal__note { color: #b45309; font-size: 11px; font-weight: 700; }
+.rm-modal__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.rm-modal .rm-error { margin-top: 4px; }
+.rm-notice { margin-bottom: 14px; padding: 10px 13px; border-radius: 9px; background: #dcf5e9; border-left: 3px solid var(--rm-primary); color: #1f6b4f; font-size: 13px; font-weight: 700; }
 
 .rm-app { display: flex; min-height: 100vh; }
 
@@ -197,13 +229,61 @@ button, input, select, textarea { font: inherit; }
 .rm-badge--gray { background: #f1f5f9; color: var(--rm-text-muted); }
 .rm-badge--blue { background: #dbeafe; color: #1d4ed8; }
 
-.rm-filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.rm-filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
 .rm-input, .rm-select {
   padding: 8px 12px;
   border: 1px solid var(--rm-border);
   border-radius: 8px;
   font-size: 13px;
 }
+/* .rm-hint is globally centred for the login form; inside a filter bar the
+   result count belongs on the right, aligned with the controls. */
+.rm-filters .rm-hint { margin: 0 0 0 auto; text-align: right; align-self: center; }
+.rm-filters .rm-input--search { flex: 1; min-width: 220px; }
+
+/* --- Activity Logs page ------------------------------------------------- */
+.rm-filters--wrap { align-items: flex-end; }
+.rm-filters--wrap .rm-select,
+.rm-filters--wrap .rm-btn { min-height: 36px; }
+
+.rm-daterange {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--rm-text-muted);
+  white-space: nowrap;
+}
+.rm-daterange .rm-input { padding: 7px 10px; }
+
+.rm-stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.rm-stat {
+  background: #fff;
+  border: 1px solid var(--rm-border);
+  border-radius: 10px;
+  padding: 12px 18px;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rm-stat strong { font-size: 22px; line-height: 1.1; color: var(--rm-primary-dark); }
+.rm-stat span { font-size: 12px; color: var(--rm-text-muted); }
+.rm-stat small { font-size: 11px; color: var(--rm-text-muted); opacity: .8; }
+
+.rm-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--rm-text-muted);
+}
+.rm-pagination .rm-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.rm-link { color: var(--rm-primary); text-decoration: underline; font-size: 12px; white-space: nowrap; }
+.rm-link:hover { color: var(--rm-primary-dark); }
 
 .rm-preview-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 24px; }
 .rm-preview-heading h2 { margin: 8px 0 4px; }
@@ -230,6 +310,21 @@ button, input, select, textarea { font: inherit; }
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--rm-primary-dark), var(--rm-primary));
+  position: relative;
+}
+/* The language tabs are `position: fixed` by default, so on this page they
+   floated over the viewport corner and covered the live-location pill.
+   The widget is anchored to the page instead, which keeps the login box
+   perfectly centred while stacking tabs on top and location underneath. */
+.rm-login-page .rm-lang-widget { position: absolute; top: 14px; right: 14px; justify-items: end; }
+.rm-login-page .rm-language-tabs { position: static; }
+/* Narrow screens: the widget can no longer hug the right edge (a 100%-wide
+   element anchored to `right` would overflow), so stretch it edge to edge and
+   pad the page so the centred box never slides underneath it. */
+@media (max-width: 520px) {
+  .rm-login-page { padding-top: 104px; }
+  .rm-login-page .rm-lang-widget { top: 10px; right: 10px; left: 10px; max-width: none; justify-items: stretch; }
+  .rm-login-page .rm-language-tabs, .rm-login-page .rm-location { max-width: 100%; }
 }
 .rm-login-box {
   background: white;
@@ -249,6 +344,58 @@ button, input, select, textarea { font: inherit; }
 .rm-login-mark { color: var(--rm-accent); font-size: 11px; font-weight: 800; letter-spacing: 1.4px; }
 .rm-login-switch { text-align: center; font-size: 12px; color: var(--rm-text-muted); margin: 18px 0 0; }
 .rm-login-switch a { color: var(--rm-primary); font-weight: 700; }
+
+/* --- Admin OTP entry ------------------------------------------------------
+   The six boxes are a rendering of ONE real input (.rm-otp-native), which is
+   kept in the accessibility tree and focusable. Hiding it with
+   `display:none` would break paste, autofill and the numeric keypad, so it is
+   moved off-screen instead and made transparent. */
+.rm-otp-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+  opacity: 0;
+}
+.rm-otp-boxes {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.rm-otp-box {
+  width: 42px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--rm-border);
+  border-radius: 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--rm-text);
+  background: #fff;
+}
+.rm-otp-box--filled { border-color: var(--rm-primary); }
+.rm-otp-box--active { border-color: var(--rm-primary); box-shadow: 0 0 0 3px rgba(15, 118, 110, .15); }
+.rm-ok { color: var(--rm-success); font-size: 12px; margin: -8px 0 12px; }
+.rm-linkbtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--rm-primary);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+/* The two OTP actions stack with a gap rather than sitting flush. */
+.rm-login-box form > .rm-btn + .rm-btn { margin-top: 10px; }
 
 .rm-entry-page { min-height: 100vh; background: #f3f7f4; color: #163b34; }
 /* /entrywork now sits inside the public shell, so it no longer needs a full-bleed background. */
@@ -379,7 +526,16 @@ button, input, select, textarea { font: inherit; }
 @media (max-width: 800px) { .rm-entry-shell { padding: 22px 18px 36px; } .rm-entry-layout { grid-template-columns: 1fr; gap: 30px; min-height: auto; padding-top: 55px; } .rm-entry-story h1 { font-size: clamp(30px, 8vw, 42px); } .rm-entry-story p { font-size: 15px; } .rm-entry-card { max-width: 520px; width: 100%; } }
 
 .rm-worker-app { min-height: 100vh; padding: 34px 6vw 60px; background: #f6f8f5; }
-.rm-worker-topbar { max-width: 1180px; margin: 0 auto 42px; padding-top: 52px; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+/* The language tabs are `position: fixed` by default so they float over every
+   page. The public header cancels that, but this page has no `.rm-public-header`
+   ancestor, so the fixed tabs were covering the live-location pill underneath.
+   Returning the widget to normal flow stacks them: tabs on top, location below. */
+.rm-worker-app .rm-language-tabs { position: static; }
+.rm-worker-app .rm-lang-widget { justify-items: end; margin-bottom: 22px; }
+.rm-worker-app .rm-lang-widget .rm-language-tabs { box-shadow: none; background: #eef4f0; }
+/* `padding-top` used to be 52px to clear the fixed language tabs. Those are in
+   normal flow on this page now, so the widget above supplies the spacing. */
+.rm-worker-topbar { max-width: 1180px; margin: 0 auto 42px; display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
 .rm-worker-topbar h1 { font-family: Georgia, serif; font-size: clamp(30px, 4vw, 48px); line-height: 1.05; margin: 10px 0 8px; color: #163b34; }
 .rm-worker-topbar p { margin: 0; color: var(--rm-text-muted); }
 .rm-worker-intro { max-width: 1180px; margin: 0 auto 24px; padding: 28px 32px; display: flex; justify-content: space-between; align-items: center; gap: 24px; background: #163b34; color: white; border-radius: 14px; }

@@ -200,12 +200,12 @@ Base URL: `http://localhost:5000/api`
 | Method | Endpoint | Auth |
 |---|---|---|
 | POST | `/ratings` | ✅ |
-| GET | `/ratings/:userId` | — |
+| GET | `/ratings/:userId` | ✅ |
 | GET | `/notifications` | ✅ |
 | PUT | `/notifications/:id/read` | ✅ |
 | PUT | `/notifications/read-all` | ✅ |
 | POST | `/reports` | ✅ |
-| POST | `/reports/block/:userId` | ✅ |
+| POST | `/reports/block/:userId` | ✅ worker / job_creator |
 | GET | `/categories` | — |
 
 ### Admin (all require `role: admin`)

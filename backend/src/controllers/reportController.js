@@ -24,6 +24,11 @@ async function createReport(req, res, next) {
 // POST /api/reports/block/:userId  (worker/creator blocking another user from their own view)
 async function blockUser(req, res, next) {
   try {
+    // Blocking yourself is always a client bug, not a moderation action.
+    if (String(req.params.userId) === String(req.user._id)) {
+      return res.status(400).json({ success: false, message: 'You cannot block yourself.' });
+    }
+
     // For MVP: "block" just prevents this user from seeing/being matched with the blocked user
     // is out of scope; here we let a user flag another as blocked on the reporter's own record only
     // is not modeled yet — for MVP we simply log it as a report with reason "Other".

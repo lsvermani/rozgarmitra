@@ -6,6 +6,7 @@ import '../screens/auth/splash_screen.dart';
 import '../screens/auth/role_select_screen.dart';
 import '../screens/auth/entrywork_screen.dart';
 import '../screens/auth/login_screen.dart';
+import '../screens/auth/whatsapp_otp_screen.dart';
 import '../screens/auth/profile_setup_screen.dart';
 import '../screens/worker/worker_home_screen.dart';
 import '../screens/worker/job_list_screen.dart';
@@ -34,11 +35,19 @@ GoRouter buildRouter(AuthProvider auth) {
           loc == '/entrywork' ||
           loc == '/role-select' ||
           loc.startsWith('/login') ||
+          // Must be listed here too: without a session this is where a user is
+          // trying to sign in, so treating it as a protected route would bounce
+          // them straight back to /entrywork in a loop.
+          loc.startsWith('/whatsapp-login') ||
           loc == '/profile-setup' ||
           loc == '/admin/server-settings';
 
       if (!loggedIn && !isAuthFlow) return '/entrywork';
-      if (loggedIn && (loc == '/entrywork' || loc == '/role-select' || loc.startsWith('/login'))) {
+      if (loggedIn &&
+          (loc == '/entrywork' ||
+              loc == '/role-select' ||
+              loc.startsWith('/login') ||
+              loc.startsWith('/whatsapp-login'))) {
         return auth.currentUser!.role == 'worker' ? '/worker/home' : '/creator/home';
       }
       return null;
@@ -52,6 +61,15 @@ GoRouter buildRouter(AuthProvider auth) {
         builder: (context, state) => LoginScreen(role: state.uri.queryParameters['role'] ?? 'worker'),
       ),
       GoRoute(path: '/profile-setup', builder: (context, state) => const ProfileSetupScreen()),
+
+      // Optional WhatsApp OTP sign-in, offered alongside the SMS / Firebase path.
+      // The existing /login flow is untouched, so WhatsApp being unavailable (or
+      // unconfigured) changes nothing for anyone who does not open this route.
+      GoRoute(
+        path: '/whatsapp-login',
+        builder: (context, state) =>
+            WhatsappOtpScreen(role: state.uri.queryParameters['role'] ?? 'worker'),
+      ),
 
       // Worker tab shell
       ShellRoute(

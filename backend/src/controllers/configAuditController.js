@@ -1,20 +1,18 @@
 const ConfigAuditLog = require('../models/ConfigAuditLog');
+// Single source of truth for redaction, shared with the newer activity trail.
+const { redact } = require('../utils/redact');
 
 const ALLOWED_ACTIONS = ['save', 'test', 'reset', 'restore', 'unlock', 'denied'];
 const ALLOWED_ENVIRONMENTS = ['development', 'testing', 'production', 'unknown'];
 
 /**
  * Removes anything credential-like from a value before it is stored.
- * Mirrors ServerConfig.redact() on the Android side, so a bug in the client can
- * never leak a password into the audit collection.
+ *
+ * Re-exported from `utils/redact.js` (the implementation was moved there so the
+ * `configauditlogs` and `activitylogs` trails redact identically). The Android
+ * app performs the same scrubbing in `ServerConfig.redact()`, so a bug in the
+ * client can never leak a password into an audit collection.
  */
-function redact(value, maxLength = 500) {
-  if (value === undefined || value === null) return '';
-  return String(value)
-    .replace(/([a-zA-Z][a-zA-Z0-9+.-]*:\/\/)[^/@\s]+@/g, '$1***@')
-    .replace(/mongodb(\+srv)?:\/\/[^\s"']+/gi, 'mongodb://***')
-    .slice(0, maxLength);
-}
 
 // POST /api/admin/server-config-log   (admin only)
 // body: { action, actor, summary, environment?, apiBaseUrl?, platform?, appVersion? }

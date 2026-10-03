@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const mongoose = require('mongoose');
@@ -10,7 +10,7 @@ const { version: APP_VERSION } = require('../package.json');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 /// Human-readable mongoose connection states. Exposed by /api/health so the app
-/// can tell "server up, database down" apart — never the host or the URI.
+/// can tell "server up, database down" apart â€” never the host or the URI.
 const DB_STATES = {
   0: 'disconnected',
   1: 'connected',
@@ -20,6 +20,15 @@ const DB_STATES = {
 };
 
 const authRoutes = require('./routes/authRoutes');
+// Admin Panel OTP login. Mounted BEFORE authRoutes on purpose: it claims
+// `/api/auth/verify-otp` for the allow-listed administrator number and calls
+// `next('router')` for everyone else, so the pre-existing worker / job-creator
+// handler behind it is reached exactly as before. Nothing existing is replaced.
+const adminOtpRoutes = require('./routes/adminOtpRoutes');
+const whatsappRoutes = require('./routes/whatsappRoutes');
+const msg91Routes = require('./routes/msg91Routes');
+const smsGatewayRoutes = require('./routes/smsGatewayRoutes');
+const capcom6Routes = require('./routes/capcom6Routes');
 const userRoutes = require('./routes/userRoutes');
 const jobRoutes = require('./routes/jobRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
@@ -133,7 +142,22 @@ app.get('/api/health/db', async (req, res) => {
   }
 });
 
+app.use('/api/auth', adminOtpRoutes);
 app.use('/api/auth', authRoutes);
+// WhatsApp OTP sits alongside the existing auth endpoints rather than replacing
+// them. Its public routes are `/api/auth/whatsapp/*`; the admin surface it
+// carries is mounted here too, but every one of those handlers is behind
+// `protect` + `requirePermission`, so they are unreachable without an admin
+// token.
+app.use('/api/auth/whatsapp', whatsappRoutes);
+// MSG91 OTP Widget. `/complete` issues a session only after MSG91 confirms the
+// widget's access-token server-side, so the client is never the authority.
+app.use('/api/auth/msg91', msg91Routes);
+// Android SMS gateway: the phone holding the SIM polls these to send messages.
+app.use('/api/sms-gateway', smsGatewayRoutes);
+// capcom6 SMS Gateway for Android. The webhook is HMAC-verified rather than
+// session-authenticated, because the app posts from the phone with no JWT.
+app.use('/api/capcom6', capcom6Routes);
 app.use('/api/users', userRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
@@ -149,3 +173,4 @@ app.use(notFound);
 app.use(errorHandler);
 
 module.exports = app;
+

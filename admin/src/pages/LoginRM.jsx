@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import BrandMark from '../components/BrandMark';
 import LanguageTabs from '../components/LanguageTabs';
 import { useLanguage } from '../context/useLanguage';
+import { setPendingName } from '../utils/pendingName';
 
 export default function LoginRM() {
-  const [name, setName] = useState(() => localStorage.getItem('rm_pending_name') || '');
+  const [name, setName] = useState(() => localStorage.getItem('rm_pending_name_unassigned') || '');
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -17,7 +18,9 @@ export default function LoginRM() {
       setError(t('nameError'));
       return;
     }
-    localStorage.setItem('rm_pending_name', trimmedName);
+    // Parked without a role: /entrywork binds it to whichever role is chosen
+    // first, so it can never be reused by the other role.
+    setPendingName(null, trimmedName);
     navigate('/entrywork');
   };
 

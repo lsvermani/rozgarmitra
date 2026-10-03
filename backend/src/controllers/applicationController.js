@@ -1,6 +1,7 @@
 const Application = require('../models/Application');
 const Job = require('../models/Job');
 const Rating = require('../models/Rating');
+const User = require('../models/User');
 const { notify } = require('../services/notificationService');
 
 // GET /api/applications
@@ -19,11 +20,42 @@ async function listApplications(req, res, next) {
       query.jobId = { $in: myJobs.map((j) => j._id) };
     }
 
+    // Nested populate (`jobId.creatorId`) does NOT resolve through a *referenced*
+    // document in Mongoose 8 — it silently leaves the raw ObjectId in place. That
+    // is why the admin Applications table showed a hex string where the job
+    // creator's name should be. The creators are fetched in one extra query and
+    // stitched on, mirroring the worker enrichment further down.
+    //
+    // `.lean()` is essential: without it `jobId` is a Mongoose document and
+    // assigning a plain user object to `jobId.creatorId` gets cast back to an
+    // ObjectId and silently dropped, so the name would still never appear.
     const applications = await Application.find(query)
       .populate('jobId', 'title category date payment status location creatorId')
-      .populate({ path: 'jobId.creatorId', select: 'name businessName mobile location' })
       .populate('workerId', 'name mobile profilePhoto skills categories rating ratingCount experienceYears totalJobs completedJobs verified location createdAt')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const creatorIds = [
+      ...new Set(
+        applications
+          .map((a) => a.jobId?.creatorId)
+          .filter(Boolean)
+          .map((id) => id.toString())
+      ),
+    ];
+
+    if (creatorIds.length) {
+      const creators = await User.find({ _id: { $in: creatorIds } })
+        .select('name businessName mobile role location')
+        .lean();
+      const creatorById = new Map(creators.map((c) => [c._id.toString(), c]));
+      for (const application of applications) {
+        const key = application.jobId?.creatorId ? String(application.jobId.creatorId) : null;
+        if (key && creatorById.has(key)) {
+          application.jobId.creatorId = creatorById.get(key);
+        }
+      }
+    }
 
     // A creator needs enough context to make a fair hiring decision. Keep the
     // contact details private until that creator confirms/selects the worker.
@@ -59,7 +91,9 @@ async function listApplications(req, res, next) {
         location: req.user.location,
       };
       const enrichedApplications = applications.map((application) => {
-        const plain = application.toObject();
+        // The query above uses .lean(), so these are already plain objects.
+        // The guard keeps both blocks working if the lean() is ever dropped.
+        const plain = application.toObject ? application.toObject() : application;
         const worker = plain.workerId;
         const workerId = worker?._id?.toString();
         const isConfirmed = ['SELECTED', 'ACCEPTED', 'COMPLETED'].includes(plain.status);
@@ -85,7 +119,7 @@ async function listApplications(req, res, next) {
     if (req.user.role === 'worker') {
       const workerContact = { name: req.user.name, mobile: req.user.mobile, location: req.user.location };
       const enrichedApplications = applications.map((application) => {
-        const plain = application.toObject();
+        const plain = application.toObject ? application.toObject() : application;
         const creator = plain.jobId?.creatorId;
         const isConfirmed = ['SELECTED', 'ACCEPTED', 'COMPLETED'].includes(plain.status);
         return {

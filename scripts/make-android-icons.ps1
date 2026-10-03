@@ -17,7 +17,7 @@
     play-store/icon-512.png                    Play Console app icon (opaque, 512x512)
     play-store/feature-graphic-1024x500.png    Play Console feature graphic
 
-  Requires the Windows .NET System.Drawing assembly (built in — no extra install).
+  Requires the Windows .NET System.Drawing assembly (built in - no extra install).
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File scripts\make-android-icons.ps1

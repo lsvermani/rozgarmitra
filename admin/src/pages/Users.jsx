@@ -1,12 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { adminApi } from '../api/client';
+import { useAuth } from '../context/useAuth';
+import EditUserModal from '../components/EditUserModal';
 
 export default function Users() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [role, setRole] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [editing, setEditing] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -32,6 +37,21 @@ export default function Users() {
     load();
   };
 
+  // Refresh the table and show a short-lived confirmation after a save.
+  const handleSaved = (updated, message) => {
+    setEditing(null);
+    if (updated) {
+      setNotice(message || 'User updated.');
+      load();
+    }
+  };
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const t = setTimeout(() => setNotice(''), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
   return (
     <div>
       <h2 style={{ marginTop: 0 }}>Users</h2>
@@ -54,6 +74,7 @@ export default function Users() {
 
       <div className="rm-card">
         {error && <div className="rm-empty">{error}</div>}
+        {notice && <div className="rm-notice">{notice}</div>}
         {loading && !error && <div className="rm-loading">Loading users...</div>}
         {!loading && !error && users.length === 0 && <div className="rm-empty">No users found.</div>}
         {!loading && !error && users.length > 0 && (
@@ -85,6 +106,13 @@ export default function Users() {
                     {!u.blocked && !u.verified && <span className="rm-badge rm-badge--amber">Pending</span>}
                   </td>
                   <td style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      className="rm-btn rm-btn--outline"
+                      onClick={() => setEditing(u)}
+                      title="Edit name, mobile, role or rating"
+                    >
+                      ✏️ Edit
+                    </button>
                     {!u.verified && (
                       <button className="rm-btn rm-btn--success" onClick={() => handleVerify(u._id)}>
                         Verify
@@ -103,6 +131,15 @@ export default function Users() {
           </table>
         )}
       </div>
+
+      {editing && (
+        <EditUserModal
+          user={editing}
+          currentUserId={currentUser?.id}
+          onClose={() => setEditing(null)}
+          onSaved={handleSaved}
+        />
+      )}
     </div>
   );
 }

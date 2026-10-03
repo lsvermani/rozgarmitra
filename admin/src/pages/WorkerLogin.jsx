@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/client';
 import { useAuth } from '../context/useAuth';
+import { useLocation } from '../context/useLocation';
+import { toLiveLocation } from '../utils/liveLocation';
 import BrandMark from '../components/BrandMark';
 
 export default function WorkerLogin() {
@@ -12,6 +14,7 @@ export default function WorkerLogin() {
   const [loading, setLoading] = useState(false);
   const [demoOtp, setDemoOtp] = useState('');
   const { login } = useAuth();
+  const { location } = useLocation();
   const navigate = useNavigate();
 
   const handleSendOtp = async (event) => {
@@ -41,7 +44,7 @@ export default function WorkerLogin() {
     setError('');
     setLoading(true);
     try {
-      const response = await authApi.verifyOtp(mobile, otp, 'worker');
+      const response = await authApi.verifyOtp(mobile, otp, 'worker', undefined, toLiveLocation(location));
       if (response.data.user.role !== 'worker') {
         setError('This account is not a worker account.');
         return;

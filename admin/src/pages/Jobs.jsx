@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { adminApi } from '../api/client';
+import EditJobModal from '../components/EditJobModal';
 
 const STATUS_COLORS = {
   POSTED: 'gray',
@@ -17,12 +18,18 @@ export default function Jobs() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [editing, setEditing] = useState(null);
+  const [total, setTotal] = useState(0);
 
   const load = useCallback(() => {
     setLoading(true);
     adminApi
       .getJobs({ status: status || undefined, search: search || undefined, limit: 50 })
-      .then((res) => setJobs(res.data.jobs))
+      .then((res) => {
+        setJobs(res.data.jobs || []);
+        setTotal(res.data.total ?? 0);
+      })
       .catch((err) => setError(err.response?.data?.message || 'Failed to load jobs.'))
       .finally(() => setLoading(false));
   }, [status, search]);
@@ -37,6 +44,21 @@ export default function Jobs() {
     await adminApi.removeJob(id);
     load();
   };
+
+  // Refresh the table and show a short-lived confirmation after a save.
+  const handleSaved = (updated, message) => {
+    setEditing(null);
+    if (updated) {
+      setNotice(message || 'Job updated.');
+      load();
+    }
+  };
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const t = setTimeout(() => setNotice(''), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
   return (
     <div>
@@ -53,16 +75,17 @@ export default function Jobs() {
           <option value="CANCELLED">Cancelled</option>
         </select>
         <input
-          className="rm-input"
+          className="rm-input rm-input--search"
           placeholder="Search job title..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ minWidth: 260 }}
         />
+        <span className="rm-hint">{jobs.length} of {total} jobs</span>
       </div>
 
       <div className="rm-card">
         {error && <div className="rm-empty">{error}</div>}
+        {notice && <div className="rm-notice">{notice}</div>}
         {loading && !error && <div className="rm-loading">Loading jobs...</div>}
         {!loading && !error && jobs.length === 0 && <div className="rm-empty">No jobs found.</div>}
         {!loading && !error && jobs.length > 0 && (
@@ -84,7 +107,11 @@ export default function Jobs() {
                 <tr key={j._id}>
                   <td>{j.title}</td>
                   <td>{j.category}</td>
-                  <td>{j.creatorId?.businessName || j.creatorId?.name || '—'}</td>
+                  <td>
+                    <strong>{j.creatorId?.businessName || j.creatorId?.name || '—'}</strong>
+                    <br />
+                    <small>{j.creatorId?.mobile || '—'}</small>
+                  </td>
                   <td>₹{j.payment}/{j.paymentUnit}</td>
                   <td>{j.applicationsCount}</td>
                   <td>
@@ -93,9 +120,18 @@ export default function Jobs() {
                     </span>
                   </td>
                   <td>
-                    <button className="rm-btn rm-btn--danger" onClick={() => handleRemove(j._id)}>
-                      Remove
-                    </button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        className="rm-btn rm-btn--outline"
+                        onClick={() => setEditing(j)}
+                        title="Edit title, category, creator or payment"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button className="rm-btn rm-btn--danger" onClick={() => handleRemove(j._id)}>
+                        Remove
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -104,6 +140,10 @@ export default function Jobs() {
           </div>
         )}
       </div>
+
+      {editing && (
+        <EditJobModal job={editing} onClose={() => setEditing(null)} onSaved={handleSaved} />
+      )}
     </div>
   );
 }

@@ -53,16 +53,17 @@ if ($ApiBaseUrl -notmatch '^https?://') {
   throw "ApiBaseUrl must start with http:// or https:// (got '$ApiBaseUrl')."
 }
 if ($ApiBaseUrl -notmatch '^https://' -and -not $ApkOnly) {
-  Write-Warning "ApiBaseUrl is not https:// — Google Play releases should use HTTPS."
+  Write-Warning "ApiBaseUrl is not https:// - Google Play releases should use HTTPS."
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $mobileRoot = Join-Path $repoRoot 'mobile'
 $androidDir = Join-Path $mobileRoot 'android'
+"PSScriptRoot='$PSScriptRoot'`nrepoRoot='$repoRoot'`nmobileRoot='$mobileRoot'`nandroidDir='$androidDir'" | Out-File -FilePath (Join-Path $env:TEMP 'rel-debug.txt') -Encoding utf8
 
 if (-not (Test-Path (Join-Path $androidDir 'key.properties'))) {
   throw @"
-No android/key.properties found — the release would be signed with the debug key
+No android/key.properties found - the release would be signed with the debug key
 and Play Console would reject it.
 
 Create the upload key first:
@@ -73,14 +74,29 @@ Create the upload key first:
 # --- Sanity checks ---------------------------------------------------------
 # Flutter resolves its project from the *process* working directory, which is not
 # always what Push-Location sets when the script is launched via Start-Process.
+# (SetCurrentDirectory is intentionally not used: with a null/empty argument it
+# throws "Path cannot be the empty string", and Push-Location alone is enough.)
 Push-Location $mobileRoot
-[System.IO.Directory]::SetCurrentDirectory($mobileRoot)
 
 if (-not (Test-Path (Join-Path $mobileRoot 'pubspec.yaml'))) {
   throw "No pubspec.yaml in $mobileRoot - is the repository layout intact?"
 }
 
 try {
+  # Make the build hermetic. Flutter's bin/internal/update_engine_version.ps1
+  # normally re-derives the engine version by shelling out to git; on a
+  # memory-starved machine that PowerShell child dies with
+  # "System.OutOfMemoryException" and the whole Gradle build fails with
+  # "Unable to determine engine version". Pinning the version from the SDK's own
+  # engine.version file skips the git subprocess entirely and is what CI does.
+  if (-not $env:FLUTTER_PREBUILT_ENGINE_VERSION -and $env:FLUTTER_ROOT) {
+    $engineVersionFile = Join-Path $env:FLUTTER_ROOT 'bin\internal\engine.version'
+    if (Test-Path $engineVersionFile) {
+      $env:FLUTTER_PREBUILT_ENGINE_VERSION = (Get-Content $engineVersionFile -Raw).Trim()
+      Write-Host ("[release] pinned engine " + $env:FLUTTER_PREBUILT_ENGINE_VERSION)
+    }
+  }
+
   Write-Host '[release] flutter pub get' -ForegroundColor Cyan
   & flutter pub get | Out-Host
   if ($LASTEXITCODE -ne 0) { throw "flutter pub get failed (exit $LASTEXITCODE)." }

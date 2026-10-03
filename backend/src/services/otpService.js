@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OTP Service
  * ------------
  * Demo mode (APP_MODE=demo): generates/accepts a fixed DEMO_OTP so the app can
@@ -13,6 +13,9 @@
 
 const isDemoMode = () => (process.env.APP_MODE || 'demo') === 'demo';
 
+const delivery = require('../config/otpDelivery');
+const deliveryService = require('./otpDeliveryService');
+
 function generateOtp() {
   if (isDemoMode()) {
     return process.env.DEMO_OTP || '123456';
@@ -21,8 +24,16 @@ function generateOtp() {
 }
 
 /**
- * Sends the OTP via SMS. In demo mode this just logs to console.
- * In production mode, plug in MSG91/Twilio/Firebase here.
+ * Sends the OTP through whichever provider `OTP_PROVIDER` selects.
+ *
+ * Delegates to `otpDeliveryService` rather than keeping its own switch, so the
+ * original `/api/auth/send-otp` and the newer `/api/auth/whatsapp/send-otp` share
+ * one code path. Before this, the legacy `SMS_PROVIDER` switch here meant the
+ * canonical endpoint silently ignored the Android-SIM gateway - the single most
+ * likely way for this feature to look broken when it was working fine.
+ *
+ * Demo mode is still honoured first: it is what makes the existing test suites
+ * and the seeded demo logins work with no provider configured at all.
  */
 async function sendSms(mobile, otp) {
   if (isDemoMode()) {
@@ -30,20 +41,15 @@ async function sendSms(mobile, otp) {
     return { success: true, provider: 'demo' };
   }
 
-  const provider = process.env.SMS_PROVIDER;
-  switch (provider) {
-    case 'msg91':
-      // TODO: integrate MSG91 SDK/API using MSG91_API_KEY, MSG91_SENDER_ID
-      throw new Error('MSG91 integration not configured yet.');
-    case 'twilio':
-      // TODO: integrate Twilio using TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
-      throw new Error('Twilio integration not configured yet.');
-    case 'firebase':
-      // TODO: integrate Firebase Phone Auth verification flow
-      throw new Error('Firebase integration not configured yet.');
-    default:
-      throw new Error('No SMS provider configured. Set APP_MODE=demo for development.');
+  const { normalisePhone } = require('../utils/phone');
+  const phone = normalisePhone(mobile);
+
+  if (!phone.ok) {
+    return { success: false, errorCode: 'invalid_number' };
   }
+
+  const result = await deliveryService.send(phone.e164, otp);
+  return { success: Boolean(result.ok), provider: delivery.getProviderConfig().provider, ...result };
 }
 
 function getOtpExpiry() {
@@ -61,3 +67,4 @@ function verifyOtp(user, submittedOtp) {
 }
 
 module.exports = { isDemoMode, generateOtp, sendSms, getOtpExpiry, verifyOtp };
+

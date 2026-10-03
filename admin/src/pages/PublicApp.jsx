@@ -15,11 +15,21 @@ const heroImage = `${import.meta.env.BASE_URL}img/hero.jpg`;
  */
 export function PublicShell({ children }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useLanguage();
+  // Hide the call-to-action on the page it links to, so the button never
+  // points at the screen the visitor is already on.
+  const isEntryWork = location.pathname === '/entrywork';
   return <div className="rm-public-app">
     <header className="rm-public-header">
       <Link to="/" className="rm-public-logo"><span className="rm-public-logo__mark"><BrandMark size={34} />ROZGAR<span>MITRA</span></span><small>{t('tagline')}</small></Link>
       <nav className="rm-public-header__tools">
+        {!isEntryWork && (
+          <Link to="/entrywork" className="rm-public-authlink">
+            <span aria-hidden="true">👤</span>
+            {t('signUpLogin')}
+          </Link>
+        )}
         <LanguageTabs />
       </nav>
     </header>
@@ -132,5 +142,5 @@ function ContactContent() {
 }
 function PublicFooter() {
   const { t } = useLanguage();
-  return <footer className="rm-public-footer"><div><strong className="rm-public-footer__brand"><BrandMark size={26} />ROZGAR<span>MITRA</span></strong><p>{t('tagline')}</p></div><div className="rm-public-footer__links"><Link to="/">{t('navHome')}</Link><Link to="/find-work">{t('navFindWork')}</Link><Link to="/register">{t('navRegister')}</Link><Link to="/terms">{t('termsTitle')}</Link><Link to="/privacy">{t('privacyTitle')}</Link><Link to="/contact">{t('contactTitle')}</Link></div><small>© 2026 Rozgarmitra. {t('footerRights')}</small></footer>;
+  return <footer className="rm-public-footer"><div><strong className="rm-public-footer__brand"><BrandMark size={26} />ROZGAR<span>MITRA</span></strong><p>{t('tagline')}</p></div><div className="rm-public-footer__links"><Link to="/">{t('navHome')}</Link><Link to="/find-work">{t('navFindWork')}</Link><Link to="/register">{t('navRegister')}</Link><Link to="/terms">{t('termsTitle')}</Link><Link to="/privacy">{t('privacyTitle')}</Link><Link to="/contact">{t('contactTitle')}</Link><Link to="/entrywork">{t('signUpLogin')}</Link><Link to="/login" className="rm-public-footer__admin">{t('adminPanel')}</Link></div><small>© 2026 Rozgarmitra. {t('footerRights')}</small></footer>;
 }

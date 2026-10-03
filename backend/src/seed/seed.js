@@ -113,7 +113,11 @@ async function seed() {
   console.log('👤 Creating admin...');
   const admin = await User.create({
     name: process.env.ADMIN_NAME || 'Super Admin',
-    mobile: process.env.ADMIN_MOBILE || '9999999999',
+    // The admin ACCOUNT's number. Keep this in step with ADMIN_PHONE_NUMBER, which
+// is the number allowed to complete an OTP admin sign-in - an OTP sent to a
+// number with no admin account would be refused at the last step.
+// Run `npm run migrate:admin-mobile` after changing an existing deployment.
+mobile: process.env.ADMIN_MOBILE || '8699142699',
     role: 'admin',
     verified: true,
   });

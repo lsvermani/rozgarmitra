@@ -202,6 +202,17 @@ class AuthProvider extends ChangeNotifier {
     return res;
   }
 
+  /// Adopts a session obtained through another verified channel (currently the
+  /// WhatsApp OTP flow) and persists it exactly like `_applyAuthResult`.
+  ///
+  /// Public so the WhatsApp screen can complete a sign-in without duplicating the
+  /// persistence rules; it deliberately does not sign out of Firebase, because a
+  /// WhatsApp sign-in says nothing about that Firebase session.
+  Future<void> adoptSession(Map<String, dynamic> res) async {
+    await _applyAuthResult(res);
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     if (_isFirebaseReady) await FirebaseAuth.instance.signOut();
     token = null;

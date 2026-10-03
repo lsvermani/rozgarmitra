@@ -6,6 +6,13 @@ and (d) produce the signed `.aab` Google Play requires.
 
 Project root = the folder that contains `backend/`, `admin/`, `mobile/`, `scripts/`.
 
+### Related documents
+
+| Document | Covers |
+|---|---|
+| [`SERVER_CONFIGURATION.md`](SERVER_CONFIGURATION.md) | Changing the backend server address **from inside the app**, without rebuilding or reinstalling the APK |
+| [`BACKEND_MONGODB.md`](BACKEND_MONGODB.md) | How the app reaches the existing MongoDB through the backend API (and why no credentials are in the APK) |
+
 ---
 
 ## 0. One-time prerequisites
@@ -58,7 +65,7 @@ Stop everything: `powershell -File scripts\stop-all.ps1`
 
 | Role | Mobile |
 |---|---|
-| Admin (dashboard) | `9999999999` |
+| Admin (dashboard) | `8699142699` (OTP via SMS - see docs/ADMIN_OTP.md) |
 | Worker (job seeker) | `9000000010` |
 | Job Creator | `8000000010` |
 
@@ -122,6 +129,22 @@ flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:5000/api
 
 If a physical device cannot reach the PC, allow Node through the Windows
 firewall for private networks (port 5000).
+
+### 3.1 Changing the server address after the app is installed
+
+`API_BASE_URL` above is only the **compile-time fallback**. Once the app is
+installed, an administrator can repoint it at any backend from inside the app —
+**no rebuild, no reinstall**:
+
+1. Sign in as an administrator, then **Profile -> Server & Admin Settings**
+   (or open `/admin/server-settings`, which also works without a session).
+2. Unlock with an admin OTP login, or with the device recovery passcode.
+3. Enter the base URL / IP + port / forwarded address / API base path and the
+   environment, then **Test Connection**.
+4. **Save Configuration** stays disabled until the test succeeds.
+
+Full guide, field reference, security rules and troubleshooting:
+[`SERVER_CONFIGURATION.md`](SERVER_CONFIGURATION.md).
 
 ---
 

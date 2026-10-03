@@ -1,105 +1,185 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApi } from '../api/client';
+import { adminOtpApi } from '../api/client';
 import { useAuth } from '../context/useAuth';
 import BrandMark from '../components/BrandMark';
 import LanguageTabs from '../components/LanguageTabs';
 
+/** Digits only. The server is the authority; this just keeps the input sane. */
+const digitsOnly = (value, max) => String(value).replace(/\D/g, '').slice(0, max);
+
+const RESEND_FALLBACK_SECONDS = 60;
+
 export default function Login() {
-  const [step, setStep] = useState('mobile'); // 'mobile' | 'otp'
-  const [mobile, setMobile] = useState('');
+  const [step, setStep] = useState('phone'); // 'phone' | 'otp'
+  const [phone, setPhone] = useState('');
+  // One digit per box. A single real input underneath keeps native autofill,
+  // paste and the on-screen numeric keypad working; the boxes are a view of it.
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
-  const [demoOtp, setDemoOtp] = useState('');
+  const [resendIn, setResendIn] = useState(0);
+  const otpInputRef = useRef(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSendOtp = async (e) => {
-    e.preventDefault();
+  // Resend countdown. Kept server-authoritative: the server returns
+  // `resendAfterSeconds` *and* rejects an early request, so shortening this
+  // timer in devtools cannot actually make a resend succeed.
+  useEffect(() => {
+    if (resendIn <= 0) return undefined;
+    const timer = setTimeout(() => setResendIn((n) => n - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendIn]);
+
+  useEffect(() => {
+    if (step === 'otp') otpInputRef.current?.focus();
+  }, [step]);
+
+  /** Shared by "Send OTP" and "Resend OTP" - identical request, identical errors. */
+  const sendOtp = async () => {
     setError('');
-    if (!/^[6-9]\d{9}$/.test(mobile)) {
-      setError('Enter a valid 10-digit mobile number.');
-      return;
-    }
+    setNotice('');
     setLoading(true);
     try {
-      const res = await authApi.sendOtp(mobile);
-      if (res.data.demoOtp) {
-        setDemoOtp(res.data.demoOtp);
-        setOtp(res.data.demoOtp); // auto-fill for demo convenience
-      }
+      const res = await adminOtpApi.requestOtp(phone);
+      setNotice(res.data.message || 'OTP sent successfully to your registered mobile number.');
+      setOtp('');
       setStep('otp');
+      setResendIn(Number(res.data.resendAfterSeconds) || RESEND_FALLBACK_SECONDS);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to send OTP.');
+      // A cooldown rejection is not something the user can fix by retrying, so
+      // the countdown restarts from the value the server reports.
+      const data = err.response?.data || {};
+      if (data.retryAfterSeconds) setResendIn(Number(data.retryAfterSeconds));
+      setError(data.message || 'Unable to send OTP. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleSendOtp = (e) => {
+    e.preventDefault();
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setError('Please enter the registered Admin mobile number.');
+      return;
+    }
+    sendOtp();
+  };
+
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError('');
+    if (!/^\d{6}$/.test(otp)) {
+      setError('Please enter the 6-digit OTP.');
+      return;
+    }
     setLoading(true);
     try {
-      const res = await authApi.verifyOtp(mobile, otp, 'admin');
-      if (res.data.user.role !== 'admin') {
-        setError('This account is not an admin account.');
-        setLoading(false);
-        return;
-      }
+      const res = await adminOtpApi.verifyOtp(phone, otp);
       login(res.data.token, res.data.user);
       navigate('/admin');
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid OTP.');
+      const data = err.response?.data || {};
+      setError(data.message || 'Invalid OTP. Please try again.');
+      // An expired or fully-spent code cannot be recovered by guessing again,
+      // so clear the boxes and let them request a new one.
+      if (['otp_expired', 'too_many_attempts', 'no_otp', 'otp_used'].includes(data.errorCode)) {
+        setOtp('');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetToPhone = () => {
+    setStep('phone');
+    setError('');
+    setNotice('');
+    setOtp('');
   };
 
   return (
     <div className="rm-login-page">
       <LanguageTabs />
       <div className="rm-login-box">
-        <h1 className="rm-login-title"><BrandMark size={40} />Rozgarmitra</h1>
-        <p className="tagline">Super Admin login — platform control center</p>
+        <h1 className="rm-login-title"><BrandMark size={40} />Rozgar<span className="rm-login-title__accent">Mitra</span></h1>
+        <p className="tagline">Super Admin login &mdash; platform control center</p>
 
-        {step === 'mobile' && (
+        {step === 'phone' && (
           <form onSubmit={handleSendOtp}>
-            <label>Admin Mobile Number</label>
+            <label htmlFor="rm-admin-phone">Admin Mobile Number</label>
             <input
+              id="rm-admin-phone"
+              name="phone"
               type="tel"
-              placeholder="9999999999"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              inputMode="numeric"
+              autoComplete="tel-national"
+              placeholder="Enter 10-digit mobile number"
+              value={phone}
+              onChange={(e) => setPhone(digitsOnly(e.target.value, 10))}
               maxLength={10}
+              disabled={loading}
             />
-            {error && <div className="rm-error">{error}</div>}
+            {error && <div className="rm-error" role="alert">{error}</div>}
             <button className="rm-btn rm-btn--primary" disabled={loading}>
               {loading ? 'Sending...' : 'Send OTP'}
             </button>
-            <p className="rm-hint">Demo admin mobile: 9999999999</p>
             <p className="rm-login-switch">
-              Looking for work? <a href={`${import.meta.env.BASE_URL}entrywork`}>Open worker dashboard</a>
+              Looking for work? <a href={`${import.meta.env.BASE_URL}entrywork`}>Worker/Job Creator Sign in</a>
             </p>
           </form>
         )}
 
         {step === 'otp' && (
           <form onSubmit={handleVerifyOtp}>
-            <label>Enter OTP sent to {mobile}</label>
+            <label htmlFor="rm-admin-otp">Enter OTP sent to {phone}</label>
+            {/* The real input. Visually hidden but focusable, so autofill,
+                paste and the numeric keypad all behave normally. The six
+                boxes below render its value - they are not six separate
+                inputs, which would break paste and focus order. */}
             <input
+              ref={otpInputRef}
+              id="rm-admin-otp"
+              name="otp"
+              className="rm-otp-native"
               type="text"
-              placeholder="123456"
+              inputMode="numeric"
+              autoComplete="one-time-code"
               value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(e) => setOtp(digitsOnly(e.target.value, 6))}
               maxLength={6}
+              disabled={loading}
             />
-            {error && <div className="rm-error">{error}</div>}
-            <button className="rm-btn rm-btn--primary" disabled={loading}>
-              {loading ? 'Verifying...' : 'Verify & Login'}
+            <div className="rm-otp-boxes" aria-hidden="true">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <span
+                  key={i}
+                  className={`rm-otp-box${otp[i] ? ' rm-otp-box--filled' : ''}${i === otp.length ? ' rm-otp-box--active' : ''}`}
+                >
+                  {otp[i] || ''}
+                </span>
+              ))}
+            </div>
+            {notice && <div className="rm-ok" role="status">{notice}</div>}
+            {error && <div className="rm-error" role="alert">{error}</div>}
+            <button className="rm-btn rm-btn--primary" disabled={loading || otp.length !== 6}>
+              {loading ? 'Verifying...' : 'Verify OTP'}
             </button>
-            {demoOtp && <p className="rm-hint">Demo mode — OTP auto-filled ({demoOtp})</p>}
+            <button
+              type="button"
+              className="rm-btn rm-btn--outline"
+              onClick={sendOtp}
+              disabled={resendIn > 0 || loading}
+            >
+              {resendIn > 0 ? `Resend OTP in ${resendIn}s` : 'Resend OTP'}
+            </button>
+            <p className="rm-login-switch">
+              <button type="button" className="rm-linkbtn" onClick={resetToPhone}>
+                Change number
+              </button>
+            </p>
           </form>
         )}
       </div>
