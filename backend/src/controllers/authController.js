@@ -49,7 +49,10 @@ async function sendOtp(req, res, next) {
     const trimmedName = typeof name === 'string' ? name.trim() : '';
 
     const lookup = role ? { mobile, role } : { mobile };
-    let user = await User.findOne(lookup);
+    // `otpLastSentAt` drives the resend cooldown and is `select: false` on the
+    // schema, so it has to be asked for explicitly - otherwise every read sees
+    // `undefined` and the cooldown silently never fires.
+    let user = await User.findOne(lookup).select('+otpLastSentAt');
 
     if (!user) {
       if (!role || !['worker', 'job_creator'].includes(role)) {
@@ -71,7 +74,27 @@ async function sendOtp(req, res, next) {
     }
 
     const otp = otpService.generateOtp();
-    user.otpCode = otp;
+
+    // Cooldown before issuing anything, so a burst of requests cannot each burn
+    // a paid SMS. Checked after the account exists but before a code is minted,
+    // and the countdown is only started on a delivery that actually succeeded.
+    const resendSeconds = otpService.getResendSeconds();
+    const lastSent = user.otpLastSentAt ? new Date(user.otpLastSentAt).getTime() : 0;
+    const waitMs = lastSent + resendSeconds * 1000 - Date.now();
+    if (waitMs > 0) {
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${Math.ceil(waitMs / 1000)}s before requesting another OTP.`,
+        errorCode: 'resend_too_soon',
+        retryAfter: Math.ceil(waitMs / 1000),
+      });
+    }
+
+    // Only the HMAC is persisted. `otpCode` is cleared so the plaintext column
+    // cannot drift out of sync with the digest that actually authorises a login.
+    user.otpHash = otpService.hashOtp(otp, user.mobile);
+    user.otpCode = undefined;
+    user.otpAttempts = 0;
     user.otpExpiresAt = otpService.getOtpExpiry();
     await user.save();
 
@@ -84,8 +107,8 @@ async function sendOtp(req, res, next) {
     // cooldown either.
     if (delivery && delivery.success === false) {
       // Clear the stored code so the failed attempt cannot be verified later.
-      user.otpCode = undefined;
-      user.otpExpiresAt = undefined;
+      user.otpHash = null;
+      user.otpExpiresAt = null;
       await user.save();
       return res.status(502).json({
         success: false,
@@ -93,10 +116,18 @@ async function sendOtp(req, res, next) {
       });
     }
 
+    // Only start the cooldown now that the message is genuinely on its way, and
+    // remember which transport carried it so the audit trail is accurate.
+    user.otpLastSentAt = new Date();
+    user.otpChannel = String((delivery && delivery.provider) || '');
+    await user.save();
+
     const payload = {
       success: true,
       message: 'OTP sent successfully.',
       isNewUser: !user.name,
+      resendAfter: resendSeconds,
+      expiresIn: Math.round((user.otpExpiresAt - Date.now()) / 1000),
     };
 
     // Only ever expose the OTP in the API response when running in demo mode,
@@ -105,8 +136,7 @@ async function sendOtp(req, res, next) {
       payload.demoOtp = otp;
     }
 
-    res.json(payload);
-  } catch (err) {
+    res.json(payload);  } catch (err) {
     next(err);
   }
 }
@@ -118,7 +148,8 @@ async function verifyOtp(req, res, next) {
     const { mobile, otp, role, name, liveLocation } = req.body;
     if (refuseAdminRole(res, role)) return;
 
-    const user = await User.findOne(role ? { mobile, role } : { mobile }).select('+otpCode +otpExpiresAt');
+    const user = await User.findOne(role ? { mobile, role } : { mobile })
+      .select('+otpCode +otpHash +otpAttempts +otpExpiresAt +otpChannel');
     if (!user) {
       otpAudit.record({ req, phone: mobile, success: false, reason: 'user_not_found', channel: 'sms', purpose: 'login', role });
       return res.status(404).json({ success: false, message: 'User not found. Please send OTP first.' });
@@ -128,8 +159,15 @@ async function verifyOtp(req, res, next) {
       return res.status(403).json({ success: false, message: 'This account has been blocked.' });
     }
 
-    const valid = otpService.verifyOtp(user, otp);
-    if (!valid) {
+    const verdict = otpService.verifyOtp(user, otp);
+    if (!verdict.ok) {
+      // Count the miss against this code so a six-digit value cannot be walked
+      // one guess at a time forever. Persisted before responding so concurrent
+      // guesses cannot all read the same counter.
+      if (verdict.code === 'invalid_otp') {
+        user.otpAttempts = Number(user.otpAttempts || 0) + 1;
+        await user.save();
+      }
       await audit.record({
         req,
         user,
@@ -140,12 +178,24 @@ async function verifyOtp(req, res, next) {
         result: 'denied',
         message: 'Invalid or expired OTP.',
       });
-      otpAudit.record({ req, user, phone: mobile, success: false, reason: 'invalid_otp', channel: 'sms', purpose: 'login' });
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP.' });
+      otpAudit.record({
+        req, user, phone: mobile, success: false, reason: verdict.code,
+        attemptsUsed: user.otpAttempts, channel: user.otpChannel || 'sms', purpose: 'login',
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired OTP.',
+        errorCode: verdict.code,
+      });
     }
 
+    // Destroy the code on success: drop the digest AND the legacy plaintext
+    // field, so neither can be replayed from a snapshot.
     user.otpCode = undefined;
+    user.otpHash = null;
     user.otpExpiresAt = undefined;
+    user.otpAttempts = 0;
+    user.otpChannel = '';
     // Only fill a missing name - see the note in sendOtp. A caller must not be
     // able to rename an existing account through the OTP endpoints.
     const trimmedName = typeof name === 'string' ? name.trim() : '';
@@ -154,7 +204,7 @@ async function verifyOtp(req, res, next) {
 
     // Fire-and-forget so a slow audit write never delays the response.
     audit.recordSignIn(req, user, { liveLocation, method: 'OTP' });
-    otpAudit.record({ req, user, phone: mobile, success: true, channel: 'sms', purpose: 'login' });
+    otpAudit.record({ req, user, phone: mobile, success: true, channel: user.otpChannel || 'sms', purpose: 'login' });
 
     const token = signToken(user);
 

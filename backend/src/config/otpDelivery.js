@@ -1,15 +1,21 @@
 ﻿/**
  * OTP delivery provider selection.
  *
- * Three transports are supported behind one interface:
+ * Transports supported behind one interface:
  *
- *   otpdev    - OTP.dev, a multi-channel aggregator (SMS / WhatsApp / Telegram /
- *               Viber / voice / email). Costs money per delivered message.
- *   whatsapp  - Meta WhatsApp Business Cloud API. Costs money per conversation.
- *   demo      - no delivery at all; the code is only in the response. Development.
+ *   startmessaging - hosted bulk-SMS API. No handset, no LAN, works anywhere.
+ *                    This is the same transport the Admin Panel uses, so worker
+ *                    and job-creator logins can share one provider account.
+ *   otpdev         - OTP.dev, a multi-channel aggregator (SMS / WhatsApp /
+ *                    Telegram / Viber / voice / email). Costs per delivered msg.
+ *   msg91api       - MSG91 server-side Send OTP.
+ *   whatsapp       - Meta WhatsApp Business Cloud API. Costs per conversation.
+ *   capcom6        - SMS Gateway for Android; the app POSTs to the handset.
+ *   gateway        - the pull-based Flutter gateway already in this repo.
+ *   demo           - no delivery at all; the code is only in the response.
  *
  * Regardless of provider, the application always generates the code itself
- * (see `services/whatsappOtpService.js`) and stores only an HMAC of it. That is a
+ * (see `services/otpService.js`) and stores only an HMAC of it. That is a
  * deliberate security choice and applies to OTP.dev too:
  *
  *   - OTP.dev's own verify endpoint is `GET /v1/verifications?code=...`, which
@@ -25,7 +31,9 @@
  */
 
 /** Providers that can actually deliver a message. */
-const DELIVERY_PROVIDERS = Object.freeze(['otpdev', 'msg91api', 'whatsapp', 'gateway', 'capcom6', 'demo']);
+const DELIVERY_PROVIDERS = Object.freeze([
+  'startmessaging', 'otpdev', 'msg91api', 'whatsapp', 'gateway', 'capcom6', 'demo',
+]);
 
 function boolEnv(name, fallback = false) {
   const raw = process.env[name];
@@ -58,6 +66,10 @@ function getProviderConfig() {
   };
 
   const ready = {
+    // StartMessaging needs only an API key; the number and template are
+    // optional. Read from the same variables the Admin Panel flow uses, so one
+    // credential serves both flows and cannot drift between them.
+    startmessaging: Boolean(process.env.STARTMESSAGING_API_KEY),
     otpdev: Boolean(otpdev.apiKey && otpdev.templateId),
     // MSG91 server-side API. Configured here (rather than in its own module)
     // so the provider table stays a single, comparable list.
@@ -94,6 +106,16 @@ function unusableReason() {
   const cfg = getProviderConfig();
   if (cfg.usable) return null;
 
+  // Named explicitly for every provider that has a missing-variable story, so
+  // the admin screen and the worker-facing error can say what to fix rather
+  // than the generic "OTP delivery is unavailable".
+  if (cfg.provider === 'startmessaging') {
+    if (!process.env.STARTMESSAGING_API_KEY) {
+      return 'StartMessaging is not configured. Set STARTMESSAGING_API_KEY.';
+    }
+    return 'StartMessaging is not configured.';
+  }
+
   if (cfg.provider === 'otpdev') {
     if (!cfg.otpdev.apiKey) return 'OTP.dev is not configured. Set OTPDEV_API_KEY.';
     if (!cfg.otpdev.templateId) return 'OTP.dev is not configured. Set OTPDEV_TEMPLATE_ID.';
@@ -120,6 +142,7 @@ function toSafeSummary() {
     provider: cfg.provider,
     usable: cfg.usable,
     reason: unusableReason(),
+    startmessaging: require('./startmessaging').toSafeSummary(),
     otpdev: {
       configured: cfg.ready.otpdev,
       apiKeySet: Boolean(cfg.otpdev.apiKey),

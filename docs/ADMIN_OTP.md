@@ -231,6 +231,7 @@ cannot be used to bypass the allow-list.
 ---
 
 ## 5. How the OTP is protected
+---
 
 - **Generated server-side** with `crypto.randomInt` (CSPRNG). `Math.random()`
   is never used - its output is predictable, and six digits drawn from it is
@@ -262,6 +263,62 @@ per-number limits are counted from database rows, so a server restart cannot
 reset them.
 
 ---
+
+
+## 5b. Worker and job-creator OTP (same StartMessaging account)
+
+The `/entrywork` and `/worker/login` flows — new **and** returning users, both
+roles — deliver through StartMessaging too, using the **same API key** as the
+admin panel. Set:
+
+```
+OTP_PROVIDER=startmessaging
+```
+
+`OTP_PROVIDER` selects the transport for `/auth/send-otp`. StartMessaging is
+now a first-class option there; before it was listed only in
+`ADMIN_OTP_PROVIDER`, so setting it here silently did nothing and fell back to
+`demo` — which reports success **without sending anything**.
+
+### Two settings, not one
+
+```
+APP_MODE=production      # anything other than `demo`
+OTP_PROVIDER=startmessaging
+```
+
+In `demo` mode `sendSms` returns success **without contacting any provider**,
+and every code is the fixed `DEMO_OTP`. Changing one setting without the other
+is the usual cause of "OTP sent successfully" with no message arriving.
+
+### What the worker flow enforces
+
+Mirrors the admin panel:
+
+| Property | How |
+| --- | --- |
+| Code generation | `crypto.randomInt` (CSPRNG). `Math.random()` is no longer used. |
+| Storage | HMAC-SHA256 in `User.otpHash`, keyed by `OTP_PEPPER`. |
+| Plaintext | Not stored. `User.otpCode` is legacy, cleared on every new code, and only read to let a code issued moments before a deploy still be redeemed. |
+| Comparison | `crypto.timingSafeEqual`. |
+| Expiry | `OTP_EXPIRY_MINUTES`. |
+| Attempt budget | `OTP_MAX_ATTEMPTS`, persisted per code. |
+| Resend cooldown | `OTP_RESEND_SECONDS`, counted from a **successful** send. |
+| Replay | The digest is dropped on success. |
+
+Responses now carry `resendAfter` and `expiresIn` so a client can mirror the
+policy, and a refused resend returns `429` with `retryAfter`.
+
+`ADMIN_OTP_PEPPER` and `OTP_PEPPER` are **separate secrets** on purpose: two
+independent flows, so leaking one cannot weaken the other.
+
+### The WhatsApp endpoint follows the same switch
+
+`/auth/whatsapp/send-otp` reads `OTP_PROVIDER` too, because
+`whatsappAuthController` uses the shared `otpDeliveryService`. That coupling
+predates this change. With `OTP_PROVIDER=startmessaging` a WhatsApp request is
+therefore delivered by StartMessaging, and a **revoked API key makes it return
+502 instead of quietly reporting success**.
 
 ## 6. Logging
 

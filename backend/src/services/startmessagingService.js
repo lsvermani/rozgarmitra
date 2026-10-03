@@ -181,4 +181,22 @@ async function checkStatus(messageId) {
   return { ok: true, state };
 }
 
-module.exports = { sendOtp, checkStatus, FRIENDLY_MESSAGES, extractMessageId };
+/**
+ * Probes the configured credentials.
+ *
+ * There is no cheap "who am I" endpoint on StartMessaging, and deliberately
+ * sending a real SMS just to test would cost money and land a message on a real
+ * handset. So this reports the local configuration instead of pretending to
+ * have contacted the API. The first real `sendOtp` is the true probe - and it
+ * logs the classified error code if the key turns out to be rejected.
+ *
+ * @returns {Promise<{ ok: boolean, provider: string, errorCode?: string }>}
+ */
+async function testConnection() {
+  const reason = config.unusableReason();
+  return reason
+    ? { ok: false, provider: 'startmessaging', errorCode: 'not_configured' }
+    : { ok: true, provider: 'startmessaging' };
+}
+
+module.exports = { sendOtp, checkStatus, testConnection, FRIENDLY_MESSAGES, extractMessageId };

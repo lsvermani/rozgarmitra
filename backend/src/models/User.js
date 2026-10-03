@@ -110,6 +110,38 @@ const userSchema = new mongoose.Schema(
 
     // OTP fields (mock/dev auth)
     otpCode: { type: String, select: false },
+
+    /**
+     * HMAC-SHA256 of the current OTP, bound to `mobile`.
+     *
+     * This is what new codes are stored as. `otpCode` above is the legacy
+     * plaintext column, kept only so a code issued by an older build can still
+     * be redeemed after a deploy; every newly issued code clears it. Plaintext
+     * storage meant a database dump handed out every live login code.
+     *
+     * `select: false` so it never rides along on an ordinary user query - only
+     * the verification path asks for it explicitly.
+     */
+    otpHash: { type: String, default: null, select: false },
+
+    /**
+     * Wrong guesses spent against the current code. Reset whenever a new code
+     * is issued. Without it a six-digit code was brute-forceable in roughly a
+     * million tries.
+     */
+    otpAttempts: { type: Number, default: 0, select: false },
+
+    /** Drives the resend cooldown for this number. */
+    otpLastSentAt: { type: Date, default: null, select: false },
+
+    /**
+     * Which transport actually delivered the current code, e.g. 'startmessaging'.
+     *
+     * Recorded so the OTP Verification Log can say "this arrived by StartMessaging"
+     * rather than a hardcoded 'sms'. Cleared with the code, so it always describes
+     * the code the row is about.
+     */
+    otpChannel: { type: String, default: '', select: false },
     otpExpiresAt: { type: Date, select: false },
 
     // WhatsApp phone verification (§ WhatsApp OTP).

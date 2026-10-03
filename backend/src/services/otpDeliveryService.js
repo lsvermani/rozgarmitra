@@ -14,6 +14,9 @@ const otpdev = require('./otpdevService');
 const whatsapp = require('./whatsappService');
 const msg91Api = require('./msg91ApiService');
 const capcom6 = require('./capcom6Service');
+// The same client the Admin Panel flow uses, so worker and job-creator logins
+// ride one provider account and one set of credentials.
+const startMessaging = require('./startmessagingService');
 
 /** Maps provider error codes onto short, user-facing sentences. */
 function deliveryMessage(errorCode) {
@@ -27,6 +30,21 @@ function deliveryMessage(errorCode) {
       return 'Our SMS gateway is not responding right now. Please try again shortly.';
     case 'enqueue_failed':
       return 'We could not queue your code. Please try again.';
+
+    // --- StartMessaging ---
+    // These arrive from startmessagingService, which classifies the HTTP status
+    // and the provider's own body. None of them are the user's fault, and none
+    // of them reveal anything about the account - an expired or revoked key
+    // says exactly what an unreachable network says.
+    case 'not_configured':
+    case 'unauthorized':
+    case 'invalid_request':
+    case 'provider_error':
+    case 'rate_limited':
+    case 'timeout':
+      return 'OTP service is temporarily unavailable. Please try again later.';
+    case 'invalid_number':
+      return 'This number cannot receive the code. Please check it and try again.';
 
     // --- Meta WhatsApp Cloud API ---
     case '131026':
@@ -88,6 +106,13 @@ async function send(e164, otp) {
     return { ok: false, errorCode: 'service_not_configured' };
   }
 
+  if (provider === 'startmessaging') {
+    // Hosted HTTPS API, E.164 numbers, `{{OTP}}` substituted by the provider.
+    // `sendOtp` already normalises the code into the configured template, so
+    // the body is not assembled here.
+    return startMessaging.sendOtp(e164, otp);
+  }
+
   if (provider === 'otpdev') {
     return otpdev.sendOtp(e164, otp);
   }
@@ -139,6 +164,7 @@ async function send(e164, otp) {
 async function testConnection() {
   const { provider, ready } = delivery.getProviderConfig();
   if (provider === 'otpdev') return otpdev.testConnection();
+  if (provider === 'startmessaging') return startMessaging.testConnection();
   if (provider === 'capcom6') return capcom6.testConnection();
   if (provider === 'msg91api') return msg91Api.checkCredentials();
   if (provider === 'whatsapp') return whatsapp.testConnection();
