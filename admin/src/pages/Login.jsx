@@ -20,6 +20,10 @@ export default function Login() {
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendIn, setResendIn] = useState(0);
+  // Drives the focus ring on the OTP boxes. Without it there is no visual
+  // feedback that the hidden input has focus, so a click that failed to focus
+  // looks identical to a field that is working.
+  const [otpFocused, setOtpFocused] = useState(false);
   const otpInputRef = useRef(null);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -147,16 +151,32 @@ export default function Login() {
               type="text"
               inputMode="numeric"
               autoComplete="one-time-code"
+              aria-label="Enter the 6-digit OTP"
               value={otp}
               onChange={(e) => setOtp(digitsOnly(e.target.value, 6))}
+              onFocus={() => setOtpFocused(true)}
+              onBlur={() => setOtpFocused(false)}
               maxLength={6}
               disabled={loading}
             />
-            <div className="rm-otp-boxes" aria-hidden="true">
+            {/* Clicking the boxes is what a person actually does, and the real input
+                is 1px wide - so without this handler focus lands on <body> and
+                every keystroke goes nowhere. Proven with a real keystroke test:
+                click-then-type entered nothing until the input was focused first.
+                focus() runs on click so it fires for mouse, pen and touch alike;
+                pointerdown would miss some assistive and synthetic input.
+                The spans stay aria-hidden: they are decoration, and the input
+                above is the real control. */}
+            <div
+              className={`rm-otp-boxes${otpFocused ? ' rm-otp-boxes--focused' : ''}`}
+              role="presentation"
+              onClick={() => otpInputRef.current?.focus()}
+            >
               {Array.from({ length: 6 }).map((_, i) => (
                 <span
                   key={i}
-                  className={`rm-otp-box${otp[i] ? ' rm-otp-box--filled' : ''}${i === otp.length ? ' rm-otp-box--active' : ''}`}
+                  aria-hidden="true"
+                  className={`rm-otp-box${otp[i] ? ' rm-otp-box--filled' : ''}${(otpFocused && i === otp.length) ? ' rm-otp-box--active' : ''}`}
                 >
                   {otp[i] || ''}
                 </span>

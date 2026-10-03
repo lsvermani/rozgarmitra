@@ -398,7 +398,15 @@ button, input, select, textarea { font: inherit; }
   background: #fff;
 }
 .rm-otp-box--filled { border-color: var(--rm-primary); }
-.rm-otp-box--active { border-color: var(--rm-primary); box-shadow: 0 0 0 3px rgba(15, 118, 110, .15); }
+.rm-otp-box--active { border-color: var(--rm-primary); }
+/* Focus ring on the *container*, so it is obvious the field took focus even
+   though the real input is invisible. Without this, a click that missed the
+   hidden input looks exactly like one that worked. */
+.rm-otp-boxes { cursor: text; border-radius: 8px; }
+.rm-otp-boxes--focused .rm-otp-box { border-color: var(--rm-primary); }
+.rm-otp-boxes--focused .rm-otp-box--active {
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, .15);
+}
 .rm-ok { color: var(--rm-success); font-size: 12px; margin: -8px 0 12px; }
 .rm-linkbtn {
   background: none;
