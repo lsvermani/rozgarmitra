@@ -6,6 +6,7 @@ import { useLanguage } from '../context/useLanguage';
 import { useLocation } from '../context/useLocation';
 import { toLiveLocation } from '../utils/liveLocation';
 import BrandMark from '../components/BrandMark';
+import OtpField from '../components/OtpField';
 import { PublicShell } from './PublicApp';
 import { claimPendingName, clearPendingNames, setPendingName } from '../utils/pendingName';
 
@@ -187,15 +188,20 @@ export default function EntryWork() {
               {step === 'mobile' ? (
                 <form onSubmit={sendOtp}>
                   <label>{t(role === 'worker' ? 'workerMobile' : 'creatorMobile')}</label>
-                  <input type="tel" placeholder={copy.placeholder} value={mobile} onChange={(event) => setMobile(event.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} />
+                  <input id="rm-entry-mobile" type="tel" placeholder={copy.placeholder} value={mobile} onChange={(event) => setMobile(event.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} />
                   {error && <div className="rm-error">{error}</div>}
                   <button className="rm-btn rm-btn--primary" disabled={loading}>{loading ? t('sending') : t('sendOtp')}</button>
                   <p className="rm-hint">{t(role === 'worker' ? 'demoWorker' : 'demoCreator')}</p>
                 </form>
               ) : step === 'otp' ? (
                 <form onSubmit={verifyOtp}>
-                  <label>{t('enterOtp')} {mobile}</label>
-                  <input type="text" placeholder="123456" value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6} />
+                  <OtpField
+                    id="rm-entry-otp"
+                    label={`${t('enterOtp')} ${mobile}`}
+                    value={otp}
+                    onChange={setOtp}
+                    disabled={loading}
+                  />
                   {error && <div className="rm-error">{error}</div>}
                   <button className="rm-btn rm-btn--primary" disabled={loading}>{loading ? t('verifying') : t(role === 'worker' ? 'workerDashboard' : 'creatorDashboard')}</button>
                   {demoOtp && <p className="rm-hint">Demo mode - OTP auto-filled ({demoOtp})</p>}

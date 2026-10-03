@@ -5,6 +5,7 @@ import { useAuth } from '../context/useAuth';
 import { useLocation } from '../context/useLocation';
 import { toLiveLocation } from '../utils/liveLocation';
 import BrandMark from '../components/BrandMark';
+import OtpField from '../components/OtpField';
 
 export default function WorkerLogin() {
   const [step, setStep] = useState('mobile');
@@ -69,6 +70,7 @@ export default function WorkerLogin() {
           <form onSubmit={handleSendOtp}>
             <label>Worker mobile number</label>
             <input
+              id="rm-worker-mobile"
               type="tel"
               placeholder="9000000010"
               value={mobile}
@@ -85,13 +87,12 @@ export default function WorkerLogin() {
 
         {step === 'otp' && (
           <form onSubmit={handleVerifyOtp}>
-            <label>Enter OTP sent to {mobile}</label>
-            <input
-              type="text"
-              placeholder="123456"
+            <OtpField
+              id="rm-worker-otp"
+              label={`Enter OTP sent to ${mobile}`}
               value={otp}
-              onChange={(event) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
-              maxLength={6}
+              onChange={setOtp}
+              disabled={loading}
             />
             {error && <div className="rm-error">{error}</div>}
             <button className="rm-btn rm-btn--primary" disabled={loading}>

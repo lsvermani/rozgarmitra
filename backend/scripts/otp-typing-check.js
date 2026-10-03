@@ -14,7 +14,17 @@ const http = require('http');
 
 const PAGE_URL = process.env.APP_URL || 'http://127.0.0.1:5173/login';
 const API_URL = process.env.API_BASE || 'http://127.0.0.1:5000/api';
-const PHONE = process.env.ADMIN_PHONE_NUMBER || '8699142699';
+// Which page to drive. All three sign-in entry points render the same
+// OtpField, so one script covers all of them; only the selectors differ.
+//   APP_URL=http://127.0.0.1:5173/entrywork  PHONE_SEL=#rm-entry-mobile  OTP_SEL=#rm-entry-otp
+const PHONE = process.env.CHECK_PHONE || '8699142699';
+const PHONE_SEL = process.env.PHONE_SEL || '#rm-admin-phone';
+const OTP_SEL = process.env.OTP_SEL || '#rm-admin-otp';
+// Submits only once six digits are entered, so its enabled state is the
+// assertion that typing actually reached the page state. Given as a source
+// pattern rather than a literal, because this runs inside a JS template string
+// and a regex literal cannot be interpolated there.
+const SUBMIT_RE_FLAGS = process.env.SUBMIT_RE || 'verify';
 const DEBUG_PORT = 9222;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -49,7 +59,13 @@ async function connect(wsUrl) {
   });
   const evaluate = async (expression) => {
     const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
-    if (r.exceptionDetails) throw new Error(r.exceptionDetails.text || 'evaluate failed');
+    if (r.exceptionDetails) {
+      // `text` is only ever "Uncaught"; the actual reason lives on the nested
+      // exception. Reporting just the former hides which step broke.
+      const d = r.exceptionDetails;
+      const why = (d.exception && (d.exception.description || d.exception.value)) || d.text;
+      throw new Error(`${why}\n  while evaluating: ${expression.slice(0, 300)}`);
+    }
     return r.result.value;
   };
   return { send, evaluate };
@@ -96,7 +112,7 @@ const FOCUS_PROBE = `(() => {
   await cdp.evaluate(`new Promise((resolve) => {
     let tries = 0;
     const tick = () => {
-      if (document.querySelector('#rm-admin-phone')) return resolve(true);
+      if (document.querySelector('${PHONE_SEL}')) return resolve(true);
       if (++tries > 60) return resolve(false);
       setTimeout(tick, 250);
     };
@@ -104,9 +120,9 @@ const FOCUS_PROBE = `(() => {
   })`);
 
   console.log('=== 1. Type the phone number ===');
-  await cdp.evaluate(`document.querySelector('#rm-admin-phone').focus()`);
+  await cdp.evaluate(`document.querySelector('${PHONE_SEL}').focus()`);
   for (const ch of PHONE) await typeChar(cdp, ch);
-  console.log('  phone value =', await cdp.evaluate(`document.querySelector('#rm-admin-phone').value`));
+  console.log('  phone value =', await cdp.evaluate(`document.querySelector('${PHONE_SEL}').value`));
 
   console.log('\n=== 2. Click Send OTP ===');
   await cdp.evaluate(`(() => {
@@ -140,13 +156,26 @@ const FOCUS_PROBE = `(() => {
   console.log('  focus after clicking the boxes:', JSON.stringify(await cdp.evaluate(FOCUS_PROBE)));
 
   console.log('\n=== 5. Type 6 digits for real ===');
+  // In demo mode the server returns the code and the page auto-fills it, so the
+  // field already holds six digits and `maxLength` would reject anything typed.
+  // Clearing through the native setter keeps React's state in step, then the
+  // keystrokes below are a genuine "can a person type into this?" test.
+  await cdp.evaluate(`(() => {
+    const el = document.querySelector('${OTP_SEL}');
+    if (!el) return false;
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(el, '');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  })()`);
+  await sleep(250);
   for (const ch of '123456') await typeChar(cdp, ch);
   await sleep(400);
 
   const after = await cdp.evaluate(`(() => ({
-    nativeValue: (document.querySelector('.rm-otp-native') || {}).value,
+    nativeValue: (document.querySelector('${OTP_SEL}') || {}).value,
     boxes: [...document.querySelectorAll('.rm-otp-box')].map(b => b.textContent).join(''),
-    verifyEnabled: !([...document.querySelectorAll('.rm-btn')].find(b => /verify/i.test(b.textContent)) || {}).disabled,
+    verifyEnabled: !([...document.querySelectorAll('.rm-btn, button')].find(b => (new RegExp('${SUBMIT_RE_FLAGS}', 'i')).test(b.textContent)) || {}).disabled,
     focus: (a => a.tagName + '#' + (a.id || '') + '.' + (a.className || ''))(document.activeElement),
   }))()`);
   console.log('  native input value:', JSON.stringify(after.nativeValue));
@@ -157,4 +186,9 @@ const FOCUS_PROBE = `(() => {
   const typed = (after.nativeValue || '').length;
   console.log(`\nRESULT: ${typed === 6 ? 'TYPING WORKS' : `BROKEN - only ${typed}/6 digits reached the input`}`);
   process.exit(typed === 6 ? 0 : 1);
-})().catch((err) => { console.error('crashed:', err.message); process.exit(1); });
+})().catch((err) => {
+  // The stack, not just err.message: a rejected CDP command reports only
+  // "Uncaught (in promise)", which says nothing about which step failed.
+  console.error('crashed:', err && err.stack ? err.stack : err);
+  process.exit(1);
+});

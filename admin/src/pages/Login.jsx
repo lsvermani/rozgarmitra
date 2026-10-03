@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminOtpApi } from '../api/client';
 import { useAuth } from '../context/useAuth';
 import BrandMark from '../components/BrandMark';
 import LanguageTabs from '../components/LanguageTabs';
+import OtpField from '../components/OtpField';
 
 /** Digits only. The server is the authority; this just keeps the input sane. */
 const digitsOnly = (value, max) => String(value).replace(/\D/g, '').slice(0, max);
@@ -20,11 +21,6 @@ export default function Login() {
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendIn, setResendIn] = useState(0);
-  // Drives the focus ring on the OTP boxes. Without it there is no visual
-  // feedback that the hidden input has focus, so a click that failed to focus
-  // looks identical to a field that is working.
-  const [otpFocused, setOtpFocused] = useState(false);
-  const otpInputRef = useRef(null);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -36,10 +32,6 @@ export default function Login() {
     const timer = setTimeout(() => setResendIn((n) => n - 1), 1000);
     return () => clearTimeout(timer);
   }, [resendIn]);
-
-  useEffect(() => {
-    if (step === 'otp') otpInputRef.current?.focus();
-  }, [step]);
 
   /** Shared by "Send OTP" and "Resend OTP" - identical request, identical errors. */
   const sendOtp = async () => {
@@ -138,58 +130,16 @@ export default function Login() {
 
         {step === 'otp' && (
           <form onSubmit={handleVerifyOtp}>
-            <label htmlFor="rm-admin-otp">Enter OTP sent to {phone}</label>
-            {/* The real input. Visually hidden but focusable, so autofill,
-                paste and the numeric keypad all behave normally. The six
-                boxes below render its value - they are not six separate
-                inputs, which would break paste and focus order. */}
-            <input
-              ref={otpInputRef}
+            {/* OtpField renders the hidden real input plus the six-box view of
+                it, focuses itself on mount, and owns the focus ring. See
+                components/OtpField.jsx for why the boxes are a <label>. */}
+            <OtpField
               id="rm-admin-otp"
-              name="otp"
-              className="rm-otp-native"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              aria-label="Enter the 6-digit OTP"
+              label={`Enter OTP sent to ${phone}`}
               value={otp}
-              onChange={(e) => setOtp(digitsOnly(e.target.value, 6))}
-              onFocus={() => setOtpFocused(true)}
-              onBlur={() => setOtpFocused(false)}
-              maxLength={6}
+              onChange={setOtp}
               disabled={loading}
             />
-            {/* The boxes ARE the label for the real input. That is the whole
-                fix: a <label htmlFor> forwards a click to its control natively,
-                so clicking anywhere in this row focuses the 1px input above with
-                no JavaScript and no dependence on event ordering. The input is
-                visually hidden, so this row is the only thing a person can aim
-                at - before this, the click fell through to <body> and every
-                keystroke was silently dropped.
-
-                The onClick is belt-and-braces for the same job; focus() is
-                idempotent, so running it twice costs nothing. onClick rather
-                than onPointerDown, because the former fires for mouse, pen and
-                touch alike and the latter does not fire for all assistive and
-                synthetic input.
-
-                The spans stay aria-hidden: they are decoration, and the input
-                above is the real control. */}
-            <label
-              htmlFor="rm-admin-otp"
-              className={`rm-otp-boxes${otpFocused ? ' rm-otp-boxes--focused' : ''}`}
-              onClick={() => otpInputRef.current?.focus()}
-            >
-              {Array.from({ length: 6 }).map((_, i) => (
-                <span
-                  key={i}
-                  aria-hidden="true"
-                  className={`rm-otp-box${otp[i] ? ' rm-otp-box--filled' : ''}${(otpFocused && i === otp.length) ? ' rm-otp-box--active' : ''}`}
-                >
-                  {otp[i] || ''}
-                </span>
-              ))}
-            </label>
             {notice && <div className="rm-ok" role="status">{notice}</div>}
             {error && <div className="rm-error" role="alert">{error}</div>}
             <button className="rm-btn rm-btn--primary" disabled={loading || otp.length !== 6}>

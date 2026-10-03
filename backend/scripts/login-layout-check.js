@@ -120,17 +120,27 @@ async function connect(wsUrl) {
     const geom = await cdp.evaluate(`(() => {
       const box = document.querySelector('.rm-login-box');
       if (!box) return { error: 'no login box' };
-      const old = box.querySelector('.rm-otp-boxes');
+      // Mirror exactly what components/OtpField.jsx renders, INCLUDING the
+      // .rm-otp-field wrapper. The OTP CSS is scoped to that wrapper, so a
+      // fixture that omits it tests markup the product never produces and
+      // reports a false failure.
+      const old = box.querySelector('.rm-otp-field');
       if (old) old.remove();
+      const field = document.createElement('div');
+      field.className = 'rm-otp-field';
+      const native = document.createElement('input');
+      native.className = 'rm-otp-native';
+      field.appendChild(native);
       const lbl = document.createElement('label');
       lbl.className = 'rm-otp-boxes';
-      lbl.setAttribute('for', 'rm-admin-otp');
+      lbl.setAttribute('for', native.id = 'rm-otp-probe');
       for (let i = 0; i < 6; i += 1) {
         const s = document.createElement('span');
         s.className = 'rm-otp-box';
         lbl.appendChild(s);
       }
-      box.appendChild(lbl);
+      field.appendChild(lbl);
+      box.appendChild(field);
       const cells = [...lbl.querySelectorAll('.rm-otp-box')].map((b) => {
         const r = b.getBoundingClientRect();
         return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width) };
